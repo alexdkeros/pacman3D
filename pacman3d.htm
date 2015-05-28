@@ -57,10 +57,15 @@
 <!---------------------------------------------------------------------------------------------------------->
 <script type="text/javascript">
 
+
+	/************************************************
+	*************************************************
+	****************Initialize WebGL*****************
+	*************************************************
+	*************************************************/
 	// the WebGL context
 	var gl;
 
-	//Initialize WebGL
 	function initGL(canvas) {
 	    try {
 		//get a webgl context
@@ -119,10 +124,105 @@
 	    return shader;
 	}
 
-	
+
+
+	/************************************************
+	*************************************************
+	***** shaderProgram with specified shaders ******
+	*************************************************
+	*************************************************/
+
+	var shaderProgram;
+
+	//Creates a program from a vertex + fragment shader pair
+	function initShaders() {
+	    var fragmentShader = getShader(gl, "shader-fs");
+	    var vertexShader = getShader(gl, "shader-vs");
+
+	    shaderProgram = gl.createProgram();
+	    gl.attachShader(shaderProgram, vertexShader);
+	    gl.attachShader(shaderProgram, fragmentShader);
+		//link the compiled binaries
+	    gl.linkProgram(shaderProgram);
+
+		//check for errors, again
+	    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+	        alert("Could not initialise shaders");
+	    }
+
+		//activate current program
+		//this sandbox has only on shader pair
+		//we can have as many as we wish in more complex applications
+	    gl.useProgram(shaderProgram);
+
+		//Update attributes for the vertex shader
+		//attributes are accessible only from the vertex shader
+		//if we want accessible data from a fragment shader we can use uniform variables,
+		//or varyings that will be forwarded from the vertex shader to the fragment shader
+		
+		//Vertex position data
+	    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+	    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+		//Vertex color data
+	    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+	    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+
+		//Update uniform variables
+		//this variables can be accessed from both the vertex and fragment shader
+	    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+	    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+	}
 
 
 
+	/************************************************
+	*************************************************
+	********pMatrix and mvMatrix operations**********
+	*************************************************
+	*************************************************/
+	//ModelView and Projection matrices
+	//mat4 comes from the external library
+	var mvMatrix = mat4.create();
+	var mvMatrixStack = [];
+	var pMatrix = mat4.create();
+
+	//The matrix stack operation are implemented below to handle local transformations
+
+	//Push Matrix Operation
+	function mvPushMatrix() {
+	    var copy = mat4.create();
+	    mat4.set(mvMatrix, copy);
+	    mvMatrixStack.push(copy);
+	}
+
+	//Pop Matrix Operation
+	function mvPopMatrix() {
+	    if (mvMatrixStack.length == 0) {
+	        throw "Invalid popMatrix!";
+	    }
+	    mvMatrix = mvMatrixStack.pop();
+	}
+
+
+	//Sets + Updates matrix uniforms
+	function setMatrixUniforms() {
+	    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+	    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+	}
+
+
+	//Rotation function helper
+	function degToRad(degrees) {
+	    return degrees * Math.PI / 180;
+	}
+
+
+	/************************************************
+	*************************************************
+	********************Buffers**********************
+	*************************************************
+	*************************************************/
 
 
 
