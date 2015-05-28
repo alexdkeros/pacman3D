@@ -1,0 +1,163 @@
+<!-- Pacman 3d -->
+
+</script><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Pacman 3D</title>
+
+<!-- external libraries for matrix calculations and maintenance -->
+<script type="text/javascript" src="./sandbox_files/glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="./sandbox_files/webgl-utils.js"></script>
+
+<!---------------------------------------------------------------------------------------------------------->
+<!------------------SHADERS--------------------------------------------------------------------------------->
+<!---------------------------------------------------------------------------------------------------------->
+
+<!-- Code for the vertex shader-->
+<script id="shader-vs" type="x-shader/x-vertex">
+//attributes for the vertex shader (different for every thread/core that will execute a copy of this)
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+
+	//ModelView and Projection Matrices
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+	//Variable to be forwarded to the corresponding thread of the fragment shader
+    varying vec4 vColor;
+
+	//main function of the vertex shader
+	//this code will be copied to many shader cores/threads and executed with the associated
+	//data for every vertex (matrices, color, etc)
+    void main(void) {
+	
+	//Each vertex is multiplied with the ModelView and Projection matrices and created a fragment
+	    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+		//Its color is forwarded to the fragment shader
+        vColor = aVertexColor;
+    }
+</script>
+
+<!-- Code for the fragment shader-->
+<script id="shader-fs" type="x-shader/x-fragment">
+    //necessary code for compatibility
+	precision mediump float;
+
+	//Variable coming from the vertex shader
+    varying vec4 vColor;
+
+    void main(void) {
+	//the fragment gets its color value.
+	//in the fragment shader many advanced shading algorithms can be implemented (Phong etc..)
+        gl_FragColor = vColor;
+    }
+</script>
+
+
+<!---------------------------------------------------------------------------------------------------------->
+<!-------------MAIN FUNCTIONALITY--------------------------------------------------------------------------->
+<!---------------------------------------------------------------------------------------------------------->
+<script type="text/javascript">
+
+	// the WebGL context
+	var gl;
+
+	//Initialize WebGL
+	function initGL(canvas) {
+	    try {
+		//get a webgl context
+	        gl = canvas.getContext("experimental-webgl");
+			//assign a viewport width and height based on the HTML canvas element properties
+	        gl.viewportWidth = canvas.width;
+	        gl.viewportHeight = canvas.height;
+			//any error is handled here
+			//all errors are visible in the console (F12 in Google chrome)
+	    } catch (e) {
+	    }
+	    if (!gl) {
+	        alert("Could not initialise WebGL, sorry :-(");
+	    }
+	}
+
+
+	//Find and compile shaders (vertex + fragment shader)
+	function getShader(gl, id) {
+	//gets the shader scripts (vertex + fragment)
+	    var shaderScript = document.getElementById(id);
+	    if (!shaderScript) {
+	        return null;
+	    }
+
+	    var str = "";
+	    var k = shaderScript.firstChild;
+	    while (k) {
+	        if (k.nodeType == 3) {
+	            str += k.textContent;
+	        }
+	        k = k.nextSibling;
+	    }
+
+	    var shader;
+		//create shaders
+	    if (shaderScript.type == "x-shader/x-fragment") {
+	        shader = gl.createShader(gl.FRAGMENT_SHADER);
+	    } else if (shaderScript.type == "x-shader/x-vertex") {
+	        shader = gl.createShader(gl.VERTEX_SHADER);
+	    } else {
+	        return null;
+	    }
+
+		//ask WebGL to compile shaders
+		//we check for errors here too
+		//all errors are visible in the console (F12 in Google chrome)
+	    gl.shaderSource(shader, str);
+	    gl.compileShader(shader);
+
+	    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+	        alert(gl.getShaderInfoLog(shader));
+	        return null;
+	    }
+
+	    return shader;
+	}
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//end of Javascript
+</script>
+</head>
+<!---------------------------------------------------------------------------------------------------------->
+<!---------HMTL for the canvas element---------------------------------------------------------------------->
+<!---------------------------------------------------------------------------------------------------------->
+<body onload="webGLStart();"> <!-- calls the entry point of our application -->
+
+    <canvas id="Pacman3D" style="border: none;" width="500" height="500"></canvas>
+
+    <br>
+
+</body></html>
