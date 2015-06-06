@@ -485,3 +485,33 @@ TpelletTile.prototype.drawObj=function(translation){
 	this.tile.drawObj(tileTranslation, tileRotation);
 }
 
+
+/************************************************
+*************************************************
+*************World  Objects**********************
+*************************************************
+*************************************************/
+function World(){
+	this.worldArray=[];
+}
+World.prototype.loadWorld=function(file){
+    var request = new XMLHttpRequest();
+    request.open("GET", file);
+    request.onreadystatechange = function () {
+        if (request.readyState == 4) {
+            var data=request.responseText;
+        	var lines=data.split("\n");
+        	var wAr=[];
+        	for (var i in lines){
+        		wAr.push(lines[i].split(" "));
+        	}
+        	this.worldArray=wAr;
+        	console.log(this.worldArray);
+        	
+        }
+    }
+    request.send();
+}
+World.prototype.drawWorld=function(){
+	console.log(this.worldArray);
+}
