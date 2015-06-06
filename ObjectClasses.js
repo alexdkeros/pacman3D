@@ -1,3 +1,23 @@
+/*
+inheritance function
+*/
+Function.prototype.inheritsFrom = function( parentClassOrObject ){ 
+	if ( parentClassOrObject.constructor == Function ) 
+	{ 
+		//Normal Inheritance 
+		this.prototype = new parentClassOrObject;
+		this.prototype.constructor = this;
+		this.prototype.parent = parentClassOrObject.prototype;
+	} 
+	else 
+	{ 
+		//Pure Virtual Inheritance 
+		this.prototype = parentClassOrObject;
+		this.prototype.constructor = this;
+		this.prototype.parent = parentClassOrObject;
+	} 
+	return this;
+} 
 /************************************************
 *************************************************
 ********************Objects**********************
@@ -13,13 +33,14 @@ function ColoredObject(){
 	this.vertexColorBuffer;
 	this.vertexIndexBuffer;
 	this.whiteTexture;
+}
 	/**
 	forms object
 	@param {float array, int, int} vertices Contains vertices.vals positions and vertices.itemSize, vertices.numItems attributes
 	@param {float array, int, int} colors Contains color.vals definitions and colors.itemSizem, colors.numItems attributes
 	@param {int array, int, int} indices Contains vertex indices.vals and indices.itemSize, indices.numItems attributes
 	*/
-	this.formObject=function(vertices,colors,indices){
+	ColoredObject.prototype.formObject=function(vertices,colors,indices){
 		//DBG
 		console.log("Forming object");
 
@@ -55,7 +76,7 @@ function ColoredObject(){
 	@private
 	@param {gl.MODE} drawingMode, example is gl.TRIANGLES
 	*/
-	this.drawObj_=function(drawingMode){
+	ColoredObject.prototype.drawObj_=function(drawingMode){
 		//DBG
 		console.log("Sending to shaderProgram, drawElement");
 
@@ -83,7 +104,7 @@ function ColoredObject(){
 	@param {float array} translation Translation array [x , y, z]
 	@param {float, float array} rotation Rotation with rotation.angle and rotation.rotAxis attributes
 	*/
-	this.drawObj=function(translation, rotation){
+	ColoredObject.prototype.drawObj=function(translation, rotation){
 		//DBG
 		console.log("Drawing Object to specified location");
 		console.log(translation);
@@ -95,7 +116,7 @@ function ColoredObject(){
 		this.drawObj_(gl.TRIANGLES);
 		mvPopMatrix();
 	}
-}
+
 
 
 
@@ -105,19 +126,20 @@ function ColoredObject(){
 textured object
 @constructor
 */
-function TexturedObject(img){
+function TexturedObject(){
 	/*object properties*/
 	this.vertexPositionBuffer;
 	this.textureCoordBuffer;
 	this.vertexIndexBuffer;
 	this.texture;
+}
 	/**
 	forms object
 	@param {float array, int, int} vertices Contains vertices.vals positions and vertices.itemSize, vertices.numItems attributes
 	@param {float array, int, int} textureCoord Contains texture positioning, textureCoord.vals, textureCoord.itemSizem, textureCoord.numItems attributes
 	@param {int array, int, int} indices Contains vertex indices.vals and indices.itemSize, indices.numItems attributes
 	*/
-	this.formObject=function(vertices,textureCoord,indices){
+	TexturedObject.prototype.formObject=function(vertices,textureCoord,indices){
 		//DBG
 		console.log("Forming object");
 		//vertices
@@ -147,7 +169,7 @@ function TexturedObject(img){
 	initialize texture
 	@param {image file} texture image
 	*/
-	this.initTexture=function(img){
+	TexturedObject.prototype.initTexture=function(img){
 		this.texture=gl.createTexture();
 		this.texture.image = new Image();
 		this.texture.image.onload = handleLoadedTexture.bind(window,this.texture); 
@@ -159,7 +181,7 @@ function TexturedObject(img){
 	@private
 	@param {gl.MODE} drawingMode, example is gl.TRIANGLES
 	*/
-	this.drawObj_=function(drawingMode){
+	TexturedObject.prototype.drawObj_=function(drawingMode){
 		//DBG
 		console.log("Sending to shaderProgram, drawElement");
 		
@@ -195,7 +217,7 @@ function TexturedObject(img){
 	@param {float array} translation Translation array [x , y, z]
 	@param {float, float array} rotation Rotation with rotation.angle and rotation.rotAxis attributes
 	*/
-	this.drawObj=function(translation, rotation){
+	TexturedObject.prototype.drawObj=function(translation, rotation){
 		//DBG
 		console.log("Drawing Object to specified location");
 		console.log(translation);
@@ -207,5 +229,114 @@ function TexturedObject(img){
 		this.drawObj_(gl.TRIANGLES);
 		mvPopMatrix();
 	}
+
+
+
+/**
+textured cube
+*/
+function Tcube(){
+
+}
+Tcube.inheritsFrom(TexturedObject);
+Tcube.prototype.formObject=function(sideLength){
+	var vertices={};
+        vertices.vals = [
+            // Front face
+            -(sideLength/2), -(sideLength/2),  (sideLength/2),
+             (sideLength/2), -(sideLength/2),  (sideLength/2),
+             (sideLength/2),  (sideLength/2),  (sideLength/2),
+            -(sideLength/2),  (sideLength/2),  (sideLength/2),
+
+            // Back face
+            -(sideLength/2), -(sideLength/2), -(sideLength/2),
+            -(sideLength/2),  (sideLength/2), -(sideLength/2),
+             (sideLength/2),  (sideLength/2), -(sideLength/2),
+             (sideLength/2), -(sideLength/2), -(sideLength/2),
+
+            // Top face
+            -(sideLength/2),  (sideLength/2), -(sideLength/2),
+            -(sideLength/2),  (sideLength/2),  (sideLength/2),
+             (sideLength/2),  (sideLength/2),  (sideLength/2),
+             (sideLength/2),  (sideLength/2), -(sideLength/2),
+
+            // Bottom face
+            -(sideLength/2), -(sideLength/2), -(sideLength/2),
+             (sideLength/2), -(sideLength/2), -(sideLength/2),
+             (sideLength/2), -(sideLength/2),  (sideLength/2),
+            -(sideLength/2), -(sideLength/2),  (sideLength/2),
+
+            // Right face
+             (sideLength/2), -(sideLength/2), -(sideLength/2),
+             (sideLength/2),  (sideLength/2), -(sideLength/2),
+             (sideLength/2),  (sideLength/2),  (sideLength/2),
+             (sideLength/2), -(sideLength/2),  (sideLength/2),
+
+            // Left face
+            -(sideLength/2), -(sideLength/2), -(sideLength/2),
+            -(sideLength/2), -(sideLength/2),  (sideLength/2),
+            -(sideLength/2),  (sideLength/2),  (sideLength/2),
+            -(sideLength/2),  (sideLength/2), -(sideLength/2)
+        ];
+        vertices.itemSize = 3;
+		//we have 24 vertices
+        vertices.numItems = 24;
+        
+        var textureCoords={};
+        textureCoords.vals = [
+            // Front face
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+
+            // Back face
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+
+            // Top face
+            0.0, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+
+            // Bottom face
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+
+            // Right face
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+
+            // Left face
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+        ];
+        textureCoords.itemSize = 2;
+        textureCoords.numItems = 24;
+		
+		//Index Buffer Object
+		var indices={};
+		indices.vals = [
+		//this numbers are positions in the VBO array above
+            0, 1, 2,      0, 2, 3,    // Front face
+            4, 5, 6,      4, 6, 7,    // Back face
+            8, 9, 10,     8, 10, 11,  // Top face
+            12, 13, 14,   12, 14, 15, // Bottom face
+            16, 17, 18,   16, 18, 19, // Right face
+            20, 21, 22,   20, 22, 23  // Left face
+        ];
+		indices.itemSize = 1;
+		//we have 36 indices (6 faces, every face has 2 triangles, each triangle 3 vertices: 2x3x6=36)
+        indices.numItems = 36;
+    	this.parent.formObject.call(this,vertices,textureCoords,indices);
 }
 
