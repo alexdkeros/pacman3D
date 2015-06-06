@@ -6,6 +6,9 @@
 <!-- external libraries for matrix calculations and maintenance -->
 <script type="text/javascript" src="./sandbox_files/glMatrix-0.9.5.min.js"></script>
 <script type="text/javascript" src="./sandbox_files/webgl-utils.js"></script>
+<script type="text/javascript" src="./WebGLHelpers.js"></script>
+<script type="text/javascript" src="./ObjectClasses.js"></script>
+
 
 <!---------------------------------------------------------------------------------------------------------->
 <!------------------SHADERS--------------------------------------------------------------------------------->
@@ -16,13 +19,14 @@
 //attributes for the vertex shader (different for every thread/core that will execute a copy of this)
     attribute vec3 aVertexPosition;
     attribute vec4 aVertexColor;
-
+    attribute vec2 aTextureCoord;
 	//ModelView and Projection Matrices
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
 
 	//Variable to be forwarded to the corresponding thread of the fragment shader
     varying vec4 vColor;
+    varying vec2 vTextureCoord;
 
 	//main function of the vertex shader
 	//this code will be copied to many shader cores/threads and executed with the associated
@@ -33,6 +37,7 @@
 	    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 		//Its color is forwarded to the fragment shader
         vColor = aVertexColor;
+        vTextureCoord=aTextureCoord;
     }
 </script>
 
@@ -43,11 +48,16 @@
 
 	//Variable coming from the vertex shader
     varying vec4 vColor;
+	varying vec2 vTextureCoord;
+
+	uniform sampler2D uSampler;
 
     void main(void) {
-	//the fragment gets its color value.
-	//in the fragment shader many advanced shading algorithms can be implemented (Phong etc..)
-        gl_FragColor = vColor;
+    	//gl_FragColor=texture2D(uSampler,vec2(vTextureCoord.s, vTextureCoord.t));
+    	
+	    vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        gl_FragColor = vec4(textureColor.rgb, textureColor.a)+vColor;
+    	
     }
 </script>
 
@@ -58,78 +68,6 @@
 <script type="text/javascript">
 
 
-	/************************************************
-	*************************************************
-	****************Initialize WebGL*****************
-	*************************************************
-	*************************************************/
-	// the WebGL context
-	var gl;
-
-	function initGL(canvas) {
-		//DBG
-		console.log("Initializing canvas");
-
-	    try {
-		//get a webgl context
-	        gl = canvas.getContext("experimental-webgl");
-			//assign a viewport width and height based on the HTML canvas element properties
-	        gl.viewportWidth = canvas.width;
-	        gl.viewportHeight = canvas.height;
-			//any error is handled here
-			//all errors are visible in the console (F12 in Google chrome)
-	    } catch (e) {
-	    }
-	    if (!gl) {
-	        alert("Could not initialise WebGL, sorry :-(");
-	    }
-
-	}
-
-
-	//Find and compile shaders (vertex + fragment shader)
-	function getShader(gl, id) {
-		//DBG
-		console.log("Getting shaders");
-
-		//gets the shader scripts (vertex + fragment)
-	    var shaderScript = document.getElementById(id);
-	    if (!shaderScript) {
-	        return null;
-	    }
-
-	    var str = "";
-	    var k = shaderScript.firstChild;
-	    while (k) {
-	        if (k.nodeType == 3) {
-	            str += k.textContent;
-	        }
-	        k = k.nextSibling;
-	    }
-
-	    var shader;
-		//create shaders
-	    if (shaderScript.type == "x-shader/x-fragment") {
-	        shader = gl.createShader(gl.FRAGMENT_SHADER);
-	    } else if (shaderScript.type == "x-shader/x-vertex") {
-	        shader = gl.createShader(gl.VERTEX_SHADER);
-	    } else {
-	        return null;
-	    }
-
-		//ask WebGL to compile shaders
-		//we check for errors here too
-		//all errors are visible in the console (F12 in Google chrome)
-	    gl.shaderSource(shader, str);
-	    gl.compileShader(shader);
-
-	    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-	        alert(gl.getShaderInfoLog(shader));
-	        return null;
-	    }
-	    return shader;
-	}
-
 
 
 	/************************************************
@@ -139,6 +77,7 @@
 	*************************************************/
 
 	var shaderProgram;
+
 
 	//Creates a program from a vertex + fragment shader pair
 	function initShaders() {
@@ -175,249 +114,32 @@
 
 		//Vertex color data
 	    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
-	    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+	    //gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+	    //Vertex texture data
+	    shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+        //gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+
 
 		//Update uniform variables
 		//this variables can be accessed from both the vertex and fragment shader
 	    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
 	    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+	    shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
 
 	}
-
-
-
-	/************************************************
-	*************************************************
-	********pMatrix and mvMatrix operations**********
-	*************************************************
-	*************************************************/
-	//ModelView and Projection matrices
-	//mat4 comes from the external library
-	var mvMatrix = mat4.create();
-	var mvMatrixStack = [];
-	var pMatrix = mat4.create();
-
-	//The matrix stack operation are implemented below to handle local transformations
-
-	//Push Matrix Operation
-	function mvPushMatrix() {
-	    var copy = mat4.create();
-	    mat4.set(mvMatrix, copy);
-	    mvMatrixStack.push(copy);
-	}
-
-	//Pop Matrix Operation
-	function mvPopMatrix() {
-	    if (mvMatrixStack.length == 0) {
-	        throw "Invalid popMatrix!";
-	    }
-	    mvMatrix = mvMatrixStack.pop();
-	}
-
-
-	//Sets + Updates matrix uniforms
-	function setMatrixUniforms() {
-	    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-	    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
-	}
-
-
-	//Rotation function helper
-	function degToRad(degrees) {
-	    return degrees * Math.PI / 180;
-	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/************************************************
-*************************************************
-********************Objects**********************
-*************************************************
-*************************************************/
-/**
-colored object
-@constructor
-*/
-function ColoredObject(){
-	/*object properties*/
-	this.vertexPositionBuffer;
-	this.vertexColorBuffer;
-	this.vertexIndexBuffer;
-	/**
-	forms object
-	@param {float array, int, int} vertices Contains vertices positions and vertices.itemSize, vertices.numItems attributes
-	@param {float array, int, int} colors Contains color definitions and colors.itemSizem, colors.numItems attributes
-	@param {int array, int, int} indices Contains vertex indices and indices.itemSize, indices.numItems attributes
-	*/
-	this.formObject=function(vertices,colors,indices){
-		//DBG
-		console.log("Forming object");
-
-		//vertices
-		this.vertexPositionBuffer=gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER,this.vertexPositionBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW);
-		this.vertexPositionBuffer.itemSize=vertices.itemSize;
-		this.vertexPositionBuffer.numItems=vertices.numItems;
-
-		//colors
-		this.vertexColorBuffer=gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER,this.vertexColorBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(colors),gl.STATIC_DRAW);
-		this.vertexColorBuffer.itemSize=colors.itemSize;
-		this.vertexColorBuffer.numItems=colors.numItems;
-		
-		//indices
-		this.vertexIndexBuffer=gl.createBuffer();
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,this.vertexIndexBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);
-		this.vertexIndexBuffer.itemSize=indices.itemSize;
-		this.vertexIndexBuffer.numItems=indices.numItems;
-	}
-
-	/**
-	draw object
-	@private
-	@param {gl.MODE} drawingMode, example is gl.TRIANGLES
-	*/
-	this.drawObj_=function(drawingMode){
-		//DBG
-		console.log("Sending to shaderProgram, drawElement");
-
-		//vertices
-		gl.bindBuffer(gl.ARRAY_BUFFER,this.vertexPositionBuffer);
-		gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute,this.vertexPositionBuffer.itemSize,gl.FLOAT, false, 0, 0);
-		//colors
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexColorBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, this.vertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
-        //indices
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        //update uniforms
-        setMatrixUniforms();
-        //Triangles mode
-        gl.drawElements(drawingMode, this.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-    }
-
-    /**
-    draw object with specified translation
-	@param {float array} translation Translation array [x , y, z]
-	@param {float, float array} rotation Rotation with rotation.angle and rotation.rotAxis attributes
-	*/
-	this.drawObj=function(translation, rotation){
-		//DBG
-		console.log("Drawing Object to specified location");
-		console.log(translation);
-		console.log(rotation);
-
-		mvPushMatrix();
-		mat4.translate(mvMatrix, translation);
-		mat4.rotate(mvMatrix, degToRad(rotation.angle), rotation.rotAxis);
-		this.drawObj_(gl.TRIANGLES);
-		mvPopMatrix();
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	/************************************************
 	*************************************************
 	********************Buffers**********************
 	*************************************************
 	*************************************************/
-
+    var Ccube;
+    var Tcube;
 
 	//Initialize VBOs, IBOs and color
-    function initBuffers(cube) {
-        vertices = [
+    function initBuffers() {
+        var vertices={};
+        vertices.vals = [
             // Front face
             -1.0, -1.0,  1.0,
              1.0, -1.0,  1.0,
@@ -457,30 +179,50 @@ function ColoredObject(){
         vertices.itemSize = 3;
 		//we have 24 vertices
         vertices.numItems = 24;
+        var textureCoords={};
+        textureCoords.vals = [
+            // Front face
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
 
-        //colors
-		colors = [
-            [1.0, 0.0, 0.0, 1.0], // Front face
-            [1.0, 1.0, 0.0, 1.0], // Back face
-            [0.0, 1.0, 0.0, 1.0], // Top face
-            [1.0, 0.5, 0.5, 1.0], // Bottom face
-            [1.0, 0.0, 1.0, 1.0], // Right face
-            [0.0, 0.0, 1.0, 1.0]  // Left face
+            // Back face
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+
+            // Top face
+            0.0, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+
+            // Bottom face
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+            1.0, 0.0,
+
+            // Right face
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+            0.0, 0.0,
+
+            // Left face
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
         ];
-        var unpackedColors = [];
-        for (var i in colors) {
-            var color = colors[i];
-			//assign colors for each vertex of each face based on the packed representation above
-            for (var j=0; j < 4; j++) {
-                unpackedColors = unpackedColors.concat(color);
-            }
-        }
-        unpackedColors.itemSize = 4;
-		//24 color values (we have 24 vertices to color...)
-        unpackedColors.numItems = 24;
-
+        textureCoords.itemSize = 2;
+        textureCoords.numItems = 24;
+		
 		//Index Buffer Object
-		var cubeVertexIndices = [
+		var cubeVertexIndices={};
+		cubeVertexIndices.vals = [
 		//this numbers are positions in the VBO array above
             0, 1, 2,      0, 2, 3,    // Front face
             4, 5, 6,      4, 6, 7,    // Back face
@@ -493,7 +235,30 @@ function ColoredObject(){
 		//we have 36 indices (6 faces, every face has 2 triangles, each triangle 3 vertices: 2x3x6=36)
         cubeVertexIndices.numItems = 36;
     
-    	cube.formObject(vertices, unpackedColors, cubeVertexIndices);
+        colors = [
+            [1.0, 0.0, 0.0, 1.0], // Front face
+            [1.0, 1.0, 0.0, 1.0], // Back face
+            [0.0, 1.0, 0.0, 1.0], // Top face
+            [1.0, 0.5, 0.5, 1.0], // Bottom face
+            [1.0, 0.0, 1.0, 1.0], // Right face
+            [0.0, 0.0, 1.0, 1.0]  // Left face
+        ];
+        var unpackedColors={};
+        unpackedColors.vals=[];
+        for (var i in colors) {
+            var color = colors[i];
+            //assign colors for each vertex of each face based on the packed representation above
+            for (var j=0; j < 4; j++) {
+                unpackedColors.vals = unpackedColors.vals.concat(color);
+            }
+        }
+        //every color has 4 values: red, green, blue and alpha (transparency: use 1.0 (opaque) for this demo)
+        unpackedColors.itemSize = 4;
+        //24 color values (we have 24 vertices to color...)
+        unpackedColors.numItems = 24;
+
+        Ccube.formObject(vertices, unpackedColors, cubeVertexIndices);
+    	Tcube.formObject(vertices,textureCoords ,cubeVertexIndices);
     }
 
 
@@ -502,7 +267,7 @@ function ColoredObject(){
 
 
 	//For every frame this function draws the complete scene from the beginning
-    function drawScene(cube) {
+    function drawScene() {
 	//the viewport gets the canvas values (that were assigned to the gl context variable)
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 		//the frame and depth buffers get cleaned (the depth buffer is used for sorting fragments)
@@ -526,25 +291,33 @@ function ColoredObject(){
 		mat4.translate(mvMatrix, [0.0, 0.0, -10.0]);
 		mat4.rotate(mvMatrix, degToRad(0),[1.0, 0.0, 0.0]);
 
-		var trans=[0.0,0.0,0.0];
+		var trans=[3.0,0.0,0.0];
 		var rot={angle:45.0,rotAxis:[1.0, 1.0, 0.0]};
-		cube.drawObj(trans,rot);
-		
+		Tcube.drawObj(trans,rot);
+		var trans1=[0.0,0.0,0.0];
+        var rot1={angle:45.0,rotAxis:[1.0, 1.0, 0.0]};
+        Ccube.drawObj(trans1,rot1);
 	}
 
+    function tick() {
+        requestAnimFrame(tick);
+        drawScene();
+
+    }
 
 
 	//Entry point of the WebGL context
 	function webGLStart() {
         var canvas = document.getElementById("Pacman3D");
-        
 		//Functions for initialization
 		//Check above
 		initGL(canvas);
-		var cube=new ColoredObject();
-        initShaders(cube)
-        initBuffers(cube);
+        Ccube=new ColoredObject();
+		Tcube=new TexturedObject();
 
+        initShaders();
+        initBuffers();
+        Tcube.initTexture("test.png");
 		//Background Color: Color assigned for all pixels with no corresponding fragments
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		
@@ -552,22 +325,8 @@ function ColoredObject(){
         gl.enable(gl.DEPTH_TEST);
 
 		//the first tick of our application
-        drawScene(cube);
+        tick();
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 //end of Javascript
 </script>
