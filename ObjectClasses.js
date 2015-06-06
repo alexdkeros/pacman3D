@@ -382,3 +382,73 @@ Ttile.prototype.formObject=function(sideLength){
         indices.numItems = 6;
     	this.parent.formObject.call(this,vertices,textureCoords,indices);
 }
+
+/*
+textured sphere
+*/
+function Tsphere(){
+
+}
+Tsphere.inheritsFrom(TexturedObject);
+Tsphere.prototype.formObject=function(radius){
+    var latitudeBands = 30;
+    var longitudeBands = 30;
+    var vertexPositionData={};
+    vertexPositionData.vals = [];
+    //var normalData = [];
+    var textureCoordData = {};
+    textureCoordData.vals= [];
+    for (var latNumber=0; latNumber <= latitudeBands; latNumber++) {
+        var theta = latNumber * Math.PI / latitudeBands;
+        var sinTheta = Math.sin(theta);
+        var cosTheta = Math.cos(theta);
+
+        for (var longNumber=0; longNumber <= longitudeBands; longNumber++) {
+            var phi = longNumber * 2 * Math.PI / longitudeBands;
+            var sinPhi = Math.sin(phi);
+            var cosPhi = Math.cos(phi);
+
+            var x = cosPhi * sinTheta;
+            var y = cosTheta;
+            var z = sinPhi * sinTheta;
+            var u = 1 - (longNumber / longitudeBands);
+            var v = 1 - (latNumber / latitudeBands);
+
+        //    normalData.push(x);
+        //    normalData.push(y);
+        //    normalData.push(z);
+            textureCoordData.vals.push(u);
+            textureCoordData.vals.push(v);
+            vertexPositionData.vals.push(radius * x);
+            vertexPositionData.vals.push(radius * y);
+            vertexPositionData.vals.push(radius * z);
+        }
+    }
+
+    vertexPositionData.itemSize=3;
+    vertexPositionData.numItems=vertexPositionData.vals.length / 3;
+
+    textureCoordData.itemSize = 2;
+    textureCoordData.numItems = textureCoordData.vals.length / 2;
+
+    var indexData ={};
+    indexData.vals = [];
+    for (var latNumber=0; latNumber < latitudeBands; latNumber++) {
+        for (var longNumber=0; longNumber < longitudeBands; longNumber++) {
+            var first = (latNumber * (longitudeBands + 1)) + longNumber;
+            var second = first + longitudeBands + 1;
+            indexData.vals.push(first);
+            indexData.vals.push(second);
+            indexData.vals.push(first + 1);
+
+            indexData.vals.push(second);
+            indexData.vals.push(second + 1);
+            indexData.vals.push(first + 1);
+        }
+    }
+    indexData.itemSize = 1;
+    indexData.numItems = indexData.vals.length;
+
+
+	this.parent.formObject.call(this,vertexPositionData,textureCoordData,indexData);
+}
