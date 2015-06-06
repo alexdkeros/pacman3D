@@ -133,7 +133,7 @@
 	********************Buffers**********************
 	*************************************************
 	*************************************************/
-    var Tcube;
+    var T;
 
 	//Initialize VBOs, IBOs and color
     function initBuffers() {
@@ -160,7 +160,7 @@
         //24 color values (we have 24 vertices to color...)
         unpackedColors.numItems = 24;
 
-        Tcube.formObject(1.0);
+        T.formObject(1.0);
     }
 
 
@@ -194,8 +194,8 @@
 		mat4.rotate(mvMatrix, degToRad(0),[1.0, 0.0, 0.0]);
 
 		var trans=[1.0,1.0,0.0];
-		var rot={angle:0.0,rotAxis:[1.0, 0.0, 0.0]};
-		Tcube.drawObj(trans,rot);
+		var rot={angle:130.0,rotAxis:[1.0, 0.0, 0.0]};
+		T.drawObj(trans,rot);
 		}
 
     function tick() {
@@ -211,11 +211,11 @@
 		//Functions for initialization
 		//Check above
 		initGL(canvas);
-        Tcube=new Tcube();
+        T=new Ttile();
 
         initShaders();
         initBuffers();
-        Tcube.initTexture("test.png");
+        T.initTexture("test.png");
 		//Background Color: Color assigned for all pixels with no corresponding fragments
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		

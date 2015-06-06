@@ -340,3 +340,45 @@ Tcube.prototype.formObject=function(sideLength){
     	this.parent.formObject.call(this,vertices,textureCoords,indices);
 }
 
+/*
+textured tile
+*/
+function Ttile(){
+
+}
+Ttile.inheritsFrom(TexturedObject);
+Ttile.prototype.formObject=function(sideLength){
+	var vertices={};
+        vertices.vals = [
+            // Face
+            -(sideLength/2), -(sideLength/2),  0,
+             (sideLength/2), -(sideLength/2),  0,
+             (sideLength/2),  (sideLength/2),  0,
+            -(sideLength/2),  (sideLength/2),  0            
+        ];
+        vertices.itemSize = 3;
+		//we have 24 vertices
+        vertices.numItems = 4;
+        
+        var textureCoords={};
+        textureCoords.vals = [
+            // Face
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0
+        ];
+        textureCoords.itemSize = 2;
+        textureCoords.numItems = 4;
+		
+		//Index Buffer Object
+		var indices={};
+		indices.vals = [
+		//this numbers are positions in the VBO array above
+            0, 1, 2,      0, 2, 3    // Front face
+        ];
+		indices.itemSize = 1;
+		//we have 6 indices (1 face, every face has 2 triangles, each triangle 3 vertices: 2x3=6)
+        indices.numItems = 6;
+    	this.parent.formObject.call(this,vertices,textureCoords,indices);
+}
