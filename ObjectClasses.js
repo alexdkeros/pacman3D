@@ -452,3 +452,36 @@ Tsphere.prototype.formObject=function(radius){
 
 	this.parent.formObject.call(this,vertexPositionData,textureCoordData,indexData);
 }
+
+
+
+/************************************************
+*************************************************
+*************Pacman Objects**********************
+*************************************************
+*************************************************/
+/*
+tile with pellet
+*/
+function TpelletTile(){
+	this.pellet = new Tsphere();
+	this.tile = new Ttile();
+}
+TpelletTile.prototype.formObject=function(radius, sideLength){
+	this.pellet.formObject(radius);
+	this.tile.formObject(sideLength);
+}
+TpelletTile.prototype.initTextures=function(pelTexture, tileTexture){
+	this.pellet.initTexture(pelTexture);
+	this.tile.initTexture(tileTexture);
+}
+TpelletTile.prototype.drawObj=function(translation){
+	var pelletTranslation=math.add([0.0, 0.0, 0.5],translation);
+	var pelletRotation={angle:0.0, rotAxis:[0,0,0]};
+	this.pellet.drawObj(pelletTranslation, pelletRotation);
+
+	var tileTranslation=math.add([0.0, 0.0, 0.0],translation);
+	var tileRotation={angle:0.0, rotAxis:[0,0,0]};
+	this.tile.drawObj(tileTranslation, tileRotation);
+}
+

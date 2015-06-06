@@ -6,6 +6,7 @@
 <!-- external libraries for matrix calculations and maintenance -->
 <script type="text/javascript" src="./sandbox_files/glMatrix-0.9.5.min.js"></script>
 <script type="text/javascript" src="./sandbox_files/webgl-utils.js"></script>
+<script type="text/javascript" src="./sandbox_files/math.min.js"></script>
 <script type="text/javascript" src="./WebGLHelpers.js"></script>
 <script type="text/javascript" src="./ObjectClasses.js"></script>
 
@@ -160,7 +161,7 @@
         //24 color values (we have 24 vertices to color...)
         unpackedColors.numItems = 24;
 
-        T.formObject(0.25);
+        T.formObject(0.15, 0.5);
     }
 
 
@@ -191,17 +192,16 @@
 		//in essence we move the world -8 units to have the camera 8 units forward.
 		//REMEMBER there is no actual camera in WebGL
 		mat4.translate(mvMatrix, [0.0, 0.0, -10.0]);
-		mat4.rotate(mvMatrix, degToRad(0),[1.0, 0.0, 0.0]);
+		mat4.rotate(mvMatrix, degToRad(-85),[1.0, 0.0, 0.0]);
 
-		var trans=[1.0,1.0,0.0];
-		var rot={angle:0.0,rotAxis:[1.0, 0.0, 0.0]};
-		T.drawObj(trans,rot);
+		var trans=[0.0,0.0,0.0];
+		var rot={angle:45.0,rotAxis:[1.0, 0.0, 0.0]};
+		T.drawObj(trans);
 		}
 
     function tick() {
         requestAnimFrame(tick);
         drawScene();
-
     }
 
 
@@ -211,11 +211,11 @@
 		//Functions for initialization
 		//Check above
 		initGL(canvas);
-        T=new Tsphere();
+        T=new TpelletTile();
 
         initShaders();
         initBuffers();
-        T.initTexture("test.png");
+        T.initTextures("test.png","brick.png");
 		//Background Color: Color assigned for all pixels with no corresponding fragments
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		
