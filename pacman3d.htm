@@ -136,6 +136,10 @@
 	*************************************************/
     var W;
     var P;
+    var G1;
+
+    var G1x=0.0;
+    var G1y=0.0;
 
 	//For every frame this function draws the complete scene from the beginning
     function drawScene() {
@@ -160,12 +164,13 @@
 		//in essence we move the world -8 units to have the camera 8 units forward.
 		//REMEMBER there is no actual camera in WebGL
 		mat4.translate(mvMatrix, [-5.0, 4.0, -20.0]);
-		mat4.rotate(mvMatrix, degToRad(0),[1.0, 0, 0.0]);
+		mat4.rotate(mvMatrix, degToRad(-45),[1.0, 0, 0.0]);
 
 		var trans=[0.0,0.0,0.0];
 		var rot={angle:0.0,rotAxis:[0.0, 0.0, 0.0]};
 		W.drawWorld();
 		P.drawObj();
+        G1.drawObj();
         }
 
     function tick() {
@@ -175,20 +180,21 @@
         animate();
     }
 
-    var validxTrans=0.0;
-    var validyTrans=0.0;
-
+    //Animate function
     function animate(){
-        //console.log([-yTrans,xTrans]);
-        if(W.canMove([-yTrans,xTrans,0])){
-            validxTrans=xTrans;
-            validyTrans=yTrans;
-            P.moveTo([xTrans,yTrans,0]);  
-            W.moveTo([-yTrans,xTrans,0]);
-        }else{
-            xTrans=validxTrans;
-            yTrans=validyTrans;
-        }
+        //animate Pacman and world
+        var ret=[];
+        ret=P.animate(W,xTrans,yTrans);
+        xTrans=ret[0];
+        yTrans=ret[1];
+
+        //animate ghosts
+        G1.animate(W);
+
+        checkColission(P,G1);
+
+        
+
     }
 
 	//Entry point of the WebGL context
@@ -201,6 +207,8 @@
         W.loadWorld("world.txt");
         P=new Pacman();
         P.formObject();
+        G1=new Ghost();
+        G1.formObject("ghost.png");
         initShaders();
         //Background Color: Color assigned for all pixels with no corresponding fragments
         gl.clearColor(0.0, 0.0, 0.0, 1.0);

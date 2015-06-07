@@ -551,7 +551,8 @@ World.prototype.drawWorld=function(){
 		}
 	}
 }
-World.prototype.canMove=function(location){
+World.prototype.canMove=function(l){
+	var location=[-l[1], l[0], l[2]];
 	if (this.worldElements.length>0){
 		//check for bounds
 		if (location[0]>=0 && location[0]<=this.worldElements.length-1){
@@ -569,31 +570,35 @@ World.prototype.canMove=function(location){
 	}
 	return false;
 }
-World.prototype.moveTo=function(location){
+World.prototype.moveTo=function(l){
+	var location=[-l[1], l[0], l[2]];
 	var x=math.round(location[0]);
 	var y=math.round(location[1]);
-	if (this.canMove([x,y])){
-		if (this.worldArray[x][y]=="p"){
-			this.worldArray[x][y]="t";
 
-			var t=new Ttile();
-			t.formObject(1,this.tileTexture);
-			this.worldElements[x][y]=t;
+	if (this.worldArray[x][y]=="p"){
+		this.worldArray[x][y]="t";
 
-			return "p";
-		}else if (this.worldArray[x][y]=="U"){
-			this.worldArray[x][y]="t";
+		var t=new Ttile();
+		t.formObject(1,this.tileTexture);
+		this.worldElements[x][y]=t;
 
-			var t=new Ttile();
-			t.formObject(1,this.tileTexture);
-			this.worldElements[x][y]=t;
-			
-			return "U";
-		}
-		return null;
+		return "p";
+	}else if (this.worldArray[x][y]=="U"){
+		this.worldArray[x][y]="t";
+
+		var t=new Ttile();
+		t.formObject(1,this.tileTexture);
+		this.worldElements[x][y]=t;
+		
+		return "U";
 	}
+	return null;
+
 }
 
+/*
+pacman
+*/
 function Pacman(){
 	this.pacBody;
 	this.pacTexture;
@@ -639,4 +644,116 @@ Pacman.prototype.moveTo=function(location){
 Pacman.prototype.drawObj=function(){
 	this.pacBody.setFixRotation({angle:90, rotAxis:[1,0,0]});
 	this.pacBody.drawObj(this.translation,this.rotation);
+}
+Pacman.prototype.animate=function(world,xTrans,yTrans){
+	if (world.canMove([xTrans,yTrans,0])){
+        P.moveTo([xTrans,yTrans,0]);  
+        world.moveTo([xTrans,yTrans,0]);
+    }
+    return this.translation;
+}
+
+/*
+ghost
+*/
+function Ghost(){
+	this.gBody;
+	this.gTexture;
+	this.translation=[0,0,0];
+	this.rotation={angle:0,rotAxis:[0,0,0]};
+
+	this.speedX = 0;
+	this.speedY = 0;
+	this.lastTime=0.0;		
+
+
+}
+Ghost.prototype.formObject=function(texturefile){
+	this.gTexture=initTexture(texturefile);
+	this.gBody=new Tsphere();
+	this.gBody.formObject(0.5,this.gTexture);
+
+	this.speedX = getRandomArbitrary(-0.1,0.1);
+	this.speedY = getRandomArbitrary(-0.1,0.1);
+	this.lastTime=0.0;
+	this.counter=0.0;
+}
+Ghost.prototype.moveTo=function(location){
+	var prevTranslation=this.translation;
+	this.translation=location;
+	var res=math.subtract(this.translation,prevTranslation);
+	if (res[0]>0 && math.round(res[1])==0){	//moving right
+		this.rotation.angle=180;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]<0 && math.round(res[1])==0){ //moving left
+		this.rotation.angle=0;
+		this.rotation.rotAxis=[0,1,0];	
+	}else if (res[1]>0 && math.round(res[0])==0){ //moving down 
+		this.rotation.angle=-90;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[1]<0 && math.round(res[0])==0){ //moving up
+		this.rotation.angle=90;
+		this.rotation.rotAxis=[0,1,0];	
+	}else if (res[0]<0 && res[1]<0){ //moving diagonaly left-up
+		this.rotation.angle=45;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]>0 && res[1]<0){ //moving diagonaly right-up
+		this.rotation.angle=135;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]<0 && res[1]>0){ //moving diagonaly left-down
+		this.rotation.angle=-45;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]>0 && res[1]>0){ //moving diagonaly right-down
+		this.rotation.angle=-135;
+		this.rotation.rotAxis=[0,1,0];
+	}
+
+}
+Ghost.prototype.drawObj=function(){
+	this.gBody.setFixRotation({angle:90, rotAxis:[1,0,0]});
+	this.gBody.drawObj(this.translation,this.rotation);
+}
+Ghost.prototype.animate=function(world){
+		var translation=[0,0,0];
+		translation[0] = this.translation[0]+this.speedX;
+		translation[1] = this.translation[1]+this.speedY;
+		
+		var timeNow = new Date().getTime();
+        if (this.lastTime != 0) {
+            var elapsed = timeNow - this.lastTime;
+	
+			this.counter += elapsed;
+			if (this.counter > 1000.0){
+				console.log("HEY")
+				this.speedX =getRandomArbitrary(-0.1,0.1);
+			}	
+			if (this.counter>2000.0){
+				console.log("HEY2")
+				this.speedY =getRandomArbitrary(-0.1,0.1);
+			}
+			if (Math.random() > 0.3){
+				this.speedX -= getRandomArbitrary(-0.05,0.05);
+				this.speedY -= getRandomArbitrary(-0.05,0.05);
+				this.counter=0;
+			}
+			
+		}
+	    this.lastTime = timeNow;
+	    
+	    if (world.canMove(translation)){
+            this.moveTo(translation);
+        }
+	    
+}
+
+
+function checkColission(el1,el2){
+	var margin=0.3;
+	if (math.round(el1.translation[0]+margin)==math.round(el2.translation[0]) || math.round(el1.translation[0]-margin)==math.round(el2.translation[0])){
+		if (math.round(el1.translation[1]+margin)==math.round(el2.translation[1]) || math.round(el1.translation[1]-margin)==math.round(el2.translation[1])){
+			console.log("COLLISION");
+			return true;
+		}
+	}
+	return false;	
 }
