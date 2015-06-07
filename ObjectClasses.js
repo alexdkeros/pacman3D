@@ -42,7 +42,7 @@ function ColoredObject(){
 	*/
 	ColoredObject.prototype.formObject=function(vertices,colors,indices){
 		//DBG
-		console.log("Forming object");
+		////console.log("Forming object");
 
 		//vertices
 		this.vertexPositionBuffer=gl.createBuffer();
@@ -78,7 +78,7 @@ function ColoredObject(){
 	*/
 	ColoredObject.prototype.drawObj_=function(drawingMode){
 		//DBG
-		console.log("Sending to shaderProgram, drawElement");
+		//console.log("Sending to shaderProgram, drawElement");
 
 		//vertices
 		gl.bindBuffer(gl.ARRAY_BUFFER,this.vertexPositionBuffer);
@@ -106,9 +106,9 @@ function ColoredObject(){
 	*/
 	ColoredObject.prototype.drawObj=function(translation, rotation){
 		//DBG
-		console.log("Drawing Object to specified location");
-		console.log(translation);
-		console.log(rotation);
+		//console.log("Drawing Object to specified location");
+		//console.log(translation);
+		//console.log(rotation);
 
 		mvPushMatrix();
 		mat4.translate(mvMatrix, translation);
@@ -141,7 +141,7 @@ function TexturedObject(){
 	*/
 	TexturedObject.prototype.formObject=function(vertices,textureCoord,indices,texture){
 		//DBG
-		console.log("Forming object");
+		//console.log("Forming object");
 		//vertices
 		this.vertexPositionBuffer=gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER,this.vertexPositionBuffer);
@@ -175,7 +175,7 @@ function TexturedObject(){
 	*/
 	TexturedObject.prototype.drawObj_=function(drawingMode){
 		//DBG
-		console.log("Sending to shaderProgram, drawElement");
+		//console.log("Sending to shaderProgram, drawElement");
 		
 		//disable color, set it to black
 		gl.disableVertexAttribArray(shaderProgram.vertexColorAttribute);
@@ -211,7 +211,7 @@ function TexturedObject(){
 	*/
 	TexturedObject.prototype.drawObj=function(translation, rotation){
 		//DBG
-		console.log("Drawing Object to specified location");
+		//console.log("Drawing Object to specified location");
 
 		mvPushMatrix();
 		mat4.translate(mvMatrix, translation);
@@ -480,6 +480,8 @@ TpelletTile.prototype.drawObj=function(translation,rotation,pelletTexture,tileTe
 function World(){
 	this.worldArray=[];
 	this.worldElements=[];
+	this.pelletTexture;
+	this.tileTexture;
 }
 World.prototype.loadWorld=function(file){
     var request = new XMLHttpRequest();
@@ -500,40 +502,81 @@ World.prototype.handleLoadedWorld=function(request,el){
 
 World.prototype.initWorld=function(){
 	if (this.worldArray.length>0){
-		var pelletTexture=initTexture("test.png");
-		var tileTexture=initTexture("brick.png");
+		this.pelletTexture=initTexture("test.png");
+		this.tileTexture=initTexture("brick.png");
 		for (var i in this.worldArray){
 			var row=[];
 			for (var j in this.worldArray[i]){
-				console.log(this.worldArray[i][j])
+				//console.log(this.worldArray[i][j])
 				if (this.worldArray[i][j]=="x"){
 					var t=new Tcube();
-					t.formObject(1,pelletTexture);
+					t.formObject(1,this.pelletTexture);
 					row.push(t);
 				}else if (this.worldArray[i][j]=="p"){
 					var t=new TpelletTile();
-					t.formObject(0.15,1,pelletTexture,tileTexture);
+					t.formObject(0.15,1,this.pelletTexture,this.tileTexture);
 					row.push(t);
 				}else if (this.worldArray[i][j]=="U"){
 					var t=new TpelletTile();
-					t.formObject(0.25,1,pelletTexture,tileTexture);
+					t.formObject(0.25,1,this.pelletTexture,this.tileTexture);
+					row.push(t);
+				}else if (this.worldArray[i][j]=="t"){
+					var t=new Ttile();
+					t.formObject(1,this.tileTexture);
 					row.push(t);
 				}
 			}
-			//console.log(row)
 			this.worldElements.push(row);
 		}
-		console.log("world initialized");
+		//console.log("world initialized");
 	}
 }
 World.prototype.drawWorld=function(){
 	if (this.worldElements.length>0){
 		for (var i in this.worldElements){
 			for (var j in this.worldElements[i]){
-				var translation=[j,i,0];
+				var translation=[j,-i,0];
 				var rotation={angle:0, rotAxis:[0,0,0]};
 				this.worldElements[i][j].drawObj(translation,rotation);
 			}
 		}
 	}
+}
+World.prototype.canMove=function(location){
+	console.log(location)
+	console.log(this.worldArray)
+	if (this.worldArray.length>0){
+		if (this.worldArray.length>location[0]){
+			if (this.worldArray[location[0]].length>location[1]){
+				if (this.worldArray[location[0]][location[1]]!="x"){
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+World.prototype.moveTo=function(location){
+	var x=location[0];
+	var y=location[1];
+	if (this.canMove(location)){
+		if (this.worldArray[x][y]=="p"){
+			this.worldArray[x][y]="t";
+
+			var t=new Ttile();
+			t.formObject(1,this.tileTexture);
+			this.worldElements[x][y]=t;
+
+			return "p";
+		}else if (this.worldArray[x][y]=="p"){
+			this.worldArray[x][y]="t";
+
+			var t=new Ttile();
+			t.formObject(1,this.tileTexture);
+			this.worldElements[x][y]=t;
+			
+			return "U";
+	}
+	return null;
+}
 }

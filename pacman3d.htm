@@ -83,7 +83,7 @@
 	//Creates a program from a vertex + fragment shader pair
 	function initShaders() {
 		//DBG
-		console.log("Initializing shaders");
+		//console.log("Initializing shaders");
 
 	    var fragmentShader = getShader(gl, "shader-fs");
 	    var vertexShader = getShader(gl, "shader-vs");
@@ -136,38 +136,6 @@
 	*************************************************/
     var W;
 
-	//Initialize VBOs, IBOs and color
-    function initBuffers() {
-        
-        colors = [
-            [1.0, 0.0, 0.0, 1.0], // Front face
-            [1.0, 1.0, 0.0, 1.0], // Back face
-            [0.0, 1.0, 0.0, 1.0], // Top face
-            [1.0, 0.5, 0.5, 1.0], // Bottom face
-            [1.0, 0.0, 1.0, 1.0], // Right face
-            [0.0, 0.0, 1.0, 1.0]  // Left face
-        ];
-        var unpackedColors={};
-        unpackedColors.vals=[];
-        for (var i in colors) {
-            var color = colors[i];
-            //assign colors for each vertex of each face based on the packed representation above
-            for (var j=0; j < 4; j++) {
-                unpackedColors.vals = unpackedColors.vals.concat(color);
-            }
-        }
-        //every color has 4 values: red, green, blue and alpha (transparency: use 1.0 (opaque) for this demo)
-        unpackedColors.itemSize = 4;
-        //24 color values (we have 24 vertices to color...)
-        unpackedColors.numItems = 24;
-
-    }
-
-
-
-
-
-
 
 	//For every frame this function draws the complete scene from the beginning
     function drawScene() {
@@ -191,8 +159,8 @@
 		//z-axis points out of the screen. we translate -8 which is the inverse transform
 		//in essence we move the world -8 units to have the camera 8 units forward.
 		//REMEMBER there is no actual camera in WebGL
-		mat4.translate(mvMatrix, [0.0, 0.0, -15.0]);
-		mat4.rotate(mvMatrix, degToRad(-45),[1.0, 1.5, 0.0]);
+		mat4.translate(mvMatrix, [-5.0, 4.0, -20.0]);
+		mat4.rotate(mvMatrix, degToRad(-45),[1.0, 0, 0.0]);
 
 		var trans=[0.0,0.0,0.0];
 		var rot={angle:0.0,rotAxis:[0.0, 0.0, 0.0]};
@@ -202,8 +170,13 @@
     function tick() {
         requestAnimFrame(tick);
         drawScene();
+        animate();
     }
 
+    
+    function animate(){
+        console.log(W.moveTo([1,1]));
+    }
 
 	//Entry point of the WebGL context
 	function webGLStart() {
@@ -214,8 +187,7 @@
         W=new World();
         W.loadWorld("world.txt");
         initShaders();
-        initBuffers();
-		//Background Color: Color assigned for all pixels with no corresponding fragments
+        //Background Color: Color assigned for all pixels with no corresponding fragments
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		
 		//Enable z-buffer for depth sorting
