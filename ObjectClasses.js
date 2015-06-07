@@ -673,10 +673,11 @@ Ghost.prototype.formObject=function(texturefile){
 	this.gBody=new Tsphere();
 	this.gBody.formObject(0.5,this.gTexture);
 
-	this.speedX = getRandomArbitrary(-0.1,0.1);
-	this.speedY = getRandomArbitrary(-0.1,0.1);
+	this.speedX = getRandomArbitrary(-0.05,0.05);
+	this.speedY = getRandomArbitrary(-0.05,0.05);
 	this.lastTime=0.0;
 	this.counter=0.0;
+	this.staticPosCounter=0.0;
 }
 Ghost.prototype.moveTo=function(location){
 	var prevTranslation=this.translation;
@@ -717,19 +718,19 @@ Ghost.prototype.animate=function(world){
 		var translation=[0,0,0];
 		translation[0] = this.translation[0]+this.speedX;
 		translation[1] = this.translation[1]+this.speedY;
-		
+
+		console.log(this.staticPosCounter);
+
 		var timeNow = new Date().getTime();
         if (this.lastTime != 0) {
             var elapsed = timeNow - this.lastTime;
 	
 			this.counter += elapsed;
-			if (this.counter > 1000.0){
-				console.log("HEY")
-				this.speedX =getRandomArbitrary(-0.1,0.1);
+			if (this.counter > 1000.0 || this.staticPosCounter>100.0){
+				this.speedX =getRandomArbitrary(-0.05,0.05);
 			}	
-			if (this.counter>2000.0){
-				console.log("HEY2")
-				this.speedY =getRandomArbitrary(-0.1,0.1);
+			if (this.counter>800.0|| this.staticPosCounter>80.0){
+				this.speedY =getRandomArbitrary(-0.05,0.05);
 			}
 			if (Math.random() > 0.3){
 				this.speedX -= getRandomArbitrary(-0.05,0.05);
@@ -742,6 +743,9 @@ Ghost.prototype.animate=function(world){
 	    
 	    if (world.canMove(translation)){
             this.moveTo(translation);
+            this.staticPosCounter=0;
+        }else{
+        	this.staticPosCounter+=1;
         }
 	    
 }
