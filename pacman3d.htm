@@ -21,13 +21,17 @@
     attribute vec3 aVertexPosition;
     attribute vec4 aVertexColor;
     attribute vec2 aTextureCoord;
+    attribute vec3 aVertexNormal;
 	//ModelView and Projection Matrices
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
+    uniform mat3 uNMatrix;
 
 	//Variable to be forwarded to the corresponding thread of the fragment shader
     varying vec4 vColor;
     varying vec2 vTextureCoord;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
 
 	//main function of the vertex shader
 	//this code will be copied to many shader cores/threads and executed with the associated
@@ -35,10 +39,12 @@
     void main(void) {
 	
 	//Each vertex is multiplied with the ModelView and Projection matrices and created a fragment
-	    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+	    gl_Position = uPMatrix * vPosition;
 		//Its color is forwarded to the fragment shader
         vColor = aVertexColor;
         vTextureCoord=aTextureCoord;
+        vTransformedNormal = uNMatrix*aVertexNormal;
     }
 </script>
 
@@ -51,15 +57,38 @@
     varying vec4 vColor;
 	varying vec2 vTextureCoord;
 
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+
+    uniform bool uUseLighting;
+
+     uniform vec3 uAmbientColor;
+
+    uniform vec3 uPointLightingLocation;
+    uniform vec3 uPointLightingColor;
+
 	uniform sampler2D uSampler;
 
     void main(void) {
     	//gl_FragColor=texture2D(uSampler,vec2(vTextureCoord.s, vTextureCoord.t));
     	
-	    vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-        gl_FragColor = vec4(textureColor.rgb, textureColor.a)+vColor;
-    	
+        vec3 lightWeighting;
+        if (!uUseLighting) {
+            lightWeighting = vec3(1.0, 1.0, 1.0);
+        } else {
+            vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+
+            float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
+            lightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
+        }
+
+        vec4 fragmentColor;
+        fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        
+        gl_FragColor = vec4(fragmentColor.rgb * lightWeighting,fragmentColor.a)+vColor;
     }
+    	
+
 </script>
 
 
@@ -113,6 +142,11 @@
 	    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
 	    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
 
+        //Vertex Normal data
+         shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+        gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
+
+
 		//Vertex color data
 	    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
 	    //gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
@@ -125,7 +159,14 @@
 		//this variables can be accessed from both the vertex and fragment shader
 	    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
 	    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+        shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
 	    shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+
+        shaderProgram.useLightingUniform = gl.getUniformLocation(shaderProgram, "uUseLighting");
+        shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
+        shaderProgram.pointLightingLocationUniform = gl.getUniformLocation(shaderProgram, "uPointLightingLocation");
+        shaderProgram.pointLightingColorUniform = gl.getUniformLocation(shaderProgram, "uPointLightingColor");
+
 
 	}
 
@@ -155,6 +196,32 @@
 		//near plane: 0.1 , far plane: 100
         mat4.perspective(45, (gl.viewportWidth / gl.viewportHeight), 0.1, 100.0, pMatrix);
 
+
+
+        var lighting = document.getElementById("lighting").checked;
+        gl.uniform1i(shaderProgram.useLightingUniform, lighting);
+        if (lighting) {
+            gl.uniform3f(
+                shaderProgram.ambientColorUniform,
+                parseFloat(document.getElementById("ambientR").value),
+                parseFloat(document.getElementById("ambientG").value),
+                parseFloat(document.getElementById("ambientB").value)
+            );
+
+            gl.uniform3f(
+                shaderProgram.pointLightingLocationUniform,
+                parseFloat(document.getElementById("lightPositionX").value),
+                parseFloat(document.getElementById("lightPositionY").value),
+                parseFloat(document.getElementById("lightPositionZ").value)
+            );
+
+            gl.uniform3f(
+                shaderProgram.pointLightingColorUniform,
+                parseFloat(document.getElementById("pointR").value),
+                parseFloat(document.getElementById("pointG").value),
+                parseFloat(document.getElementById("pointB").value)
+            );
+        }
 		//the modelview Matrix is initialized with the Identity Matrix
         mat4.identity(mvMatrix);
 		
@@ -252,7 +319,37 @@
 <body onload="webGLStart();"> <!-- calls the entry point of our application -->
 
     <canvas id="Pacman3D" style="border: none;" width="500" height="500"></canvas>
+<br/>
 
-    <br>
+    <input type="checkbox" id="lighting" checked /> Use lighting<br/>
+    <br/>
+
+    <h2>Point light:</h2>
+
+    <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>Location:</b>
+            <td>X: <input type="text" id="lightPositionX" value="0.0" />
+            <td>Y: <input type="text" id="lightPositionY" value="0.0" />
+            <td>Z: <input type="text" id="lightPositionZ" value="-5.0" />
+        </tr>
+        <tr>
+            <td><b>Colour:</b>
+            <td>R: <input type="text" id="pointR" value="0.8" />
+            <td>G: <input type="text" id="pointG" value="0.8" />
+            <td>B: <input type="text" id="pointB" value="0.8" />
+        </tr>
+    </table>
+
+    <h2>Ambient light:</h2>
+
+    <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>Colour:</b>
+            <td>R: <input type="text" id="ambientR" value="0.2" />
+            <td>G: <input type="text" id="ambientG" value="0.2" />
+            <td>B: <input type="text" id="ambientB" value="0.2" />
+        </tr>
+    </table>
 
 </body></html>

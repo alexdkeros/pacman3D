@@ -129,6 +129,7 @@ textured object
 function TexturedObject(){
 	/*object properties*/
 	this.vertexPositionBuffer;
+	this.vertexNormalBuffer;
 	this.textureCoordBuffer;
 	this.vertexIndexBuffer;
 	this.texture;
@@ -140,7 +141,7 @@ function TexturedObject(){
 	@param {float array, int, int} textureCoord Contains texture positioning, textureCoord.vals, textureCoord.itemSizem, textureCoord.numItems attributes
 	@param {int array, int, int} indices Contains vertex indices.vals and indices.itemSize, indices.numItems attributes
 	*/
-	TexturedObject.prototype.formObject=function(vertices,textureCoord,indices,texture){
+	TexturedObject.prototype.formObject=function(vertices,vertexNormals, textureCoord,indices,texture){
 		//DBG
 		//console.log("Forming object");
 		//vertices
@@ -149,7 +150,14 @@ function TexturedObject(){
 		gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices.vals),gl.STATIC_DRAW);
 		this.vertexPositionBuffer.itemSize=vertices.itemSize;
 		this.vertexPositionBuffer.numItems=vertices.numItems;
-		
+
+		//normals
+        this.vertexNormalBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexNormalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals.vals), gl.STATIC_DRAW);
+        this.vertexNormalBuffer.itemSize = vertexNormals.itemSize;
+        this.vertexNormalBuffer.numItems = vertexNormals.numItems;
+
 		//texture
         this.textureCoordBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.textureCoordBuffer);
@@ -199,6 +207,10 @@ function TexturedObject(){
 		gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.uniform1i(shaderProgram.samplerUniform, 0);
+
+        //normals
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexNormalBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, this.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         //indices
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
@@ -278,6 +290,47 @@ Tcube.prototype.formObject=function(sideLength,texture){
         vertices.itemSize = 3;
 		//we have 24 vertices
         vertices.numItems = 24;
+
+        var vertexNormals = {}
+        vertexNormals.vals= [
+            // Front face
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+
+            // Back face
+             0.0,  0.0, -1.0,
+             0.0,  0.0, -1.0,
+             0.0,  0.0, -1.0,
+             0.0,  0.0, -1.0,
+
+            // Top face
+             0.0,  1.0,  0.0,
+             0.0,  1.0,  0.0,
+             0.0,  1.0,  0.0,
+             0.0,  1.0,  0.0,
+
+            // Bottom face
+             0.0, -1.0,  0.0,
+             0.0, -1.0,  0.0,
+             0.0, -1.0,  0.0,
+             0.0, -1.0,  0.0,
+
+            // Right face
+             1.0,  0.0,  0.0,
+             1.0,  0.0,  0.0,
+             1.0,  0.0,  0.0,
+             1.0,  0.0,  0.0,
+
+            // Left face
+            -1.0,  0.0,  0.0,
+            -1.0,  0.0,  0.0,
+            -1.0,  0.0,  0.0,
+            -1.0,  0.0,  0.0,
+        ];
+        vertexNormals.itemSize = 3;
+        vertexNormals.numItems = 24;
         
         var textureCoords={};
         textureCoords.vals = [
@@ -334,7 +387,7 @@ Tcube.prototype.formObject=function(sideLength,texture){
 		indices.itemSize = 1;
 		//we have 36 indices (6 faces, every face has 2 triangles, each triangle 3 vertices: 2x3x6=36)
         indices.numItems = 36;
-    	this.parent.formObject.call(this,vertices,textureCoords,indices,texture);
+    	this.parent.formObject.call(this,vertices,vertexNormals, textureCoords,indices,texture);
 }
 
 /*
@@ -357,6 +410,17 @@ Ttile.prototype.formObject=function(sideLength,texture){
 		//we have 24 vertices
         vertices.numItems = 4;
         
+        var vertexNormals = {}
+        vertexNormals.vals= [
+            // Front face
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0
+        ];
+        vertexNormals.itemSize = 3;
+        vertexNormals.numItems = 4;
+        
         var textureCoords={};
         textureCoords.vals = [
             // Face
@@ -377,7 +441,7 @@ Ttile.prototype.formObject=function(sideLength,texture){
 		indices.itemSize = 1;
 		//we have 6 indices (1 face, every face has 2 triangles, each triangle 3 vertices: 2x3=6)
         indices.numItems = 6;
-    	this.parent.formObject.call(this,vertices,textureCoords,indices,texture);
+    	this.parent.formObject.call(this,vertices,vertexNormals,textureCoords,indices,texture);
 }
 
 /*
@@ -392,7 +456,8 @@ Tsphere.prototype.formObject=function(radius,texture){
     var longitudeBands = 20;
     var vertexPositionData={};
     vertexPositionData.vals = [];
-    //var normalData = [];
+    var normalData ={};
+    normalData.vals = [];
     var textureCoordData = {};
     textureCoordData.vals= [];
     for (var latNumber=0; latNumber <= latitudeBands; latNumber++) {
@@ -411,9 +476,9 @@ Tsphere.prototype.formObject=function(radius,texture){
             var u = 1-(longNumber / longitudeBands);
             var v = 1- (latNumber / latitudeBands);
 
-        //    normalData.push(x);
-        //    normalData.push(y);
-        //    normalData.push(z);
+            normalData.vals.push(x);
+            normalData.vals.push(y);
+            normalData.vals.push(z);
             textureCoordData.vals.push(u);
             textureCoordData.vals.push(v);
             vertexPositionData.vals.push(radius * x);
@@ -424,6 +489,9 @@ Tsphere.prototype.formObject=function(radius,texture){
 
     vertexPositionData.itemSize=3;
     vertexPositionData.numItems=vertexPositionData.vals.length / 3;
+
+    normalData.itemSize = 3;
+    normalData.numItems = normalData.vals.length /3;
 
     textureCoordData.itemSize = 2;
     textureCoordData.numItems = textureCoordData.vals.length / 2;
@@ -447,7 +515,7 @@ Tsphere.prototype.formObject=function(radius,texture){
     indexData.numItems = indexData.vals.length;
 
 
-	this.parent.formObject.call(this,vertexPositionData,textureCoordData,indexData,texture);
+	this.parent.formObject.call(this,vertexPositionData,normalData,textureCoordData,indexData,texture);
 }
 
 
