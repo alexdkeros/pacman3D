@@ -469,7 +469,7 @@ TpelletTile.prototype.formObject=function(radius, sideLength,pTexture, tTexture)
 	this.tile.formObject(sideLength,tTexture);
 }
 TpelletTile.prototype.drawObj=function(translation,rotation,pelletTexture,tileTexture){
-	var pelletTranslation=math.add([0.0, 0.0, 0.5],translation);
+	var pelletTranslation=math.add([0.0, 0.0, 0.25],translation);
 	var pelletRotation={angle:0.0, rotAxis:[0,0,0]};
 	this.pellet.drawObj(pelletTranslation, pelletRotation,pelletTexture);
 
@@ -719,7 +719,6 @@ Ghost.prototype.animate=function(world){
 		translation[0] = this.translation[0]+this.speedX;
 		translation[1] = this.translation[1]+this.speedY;
 
-		console.log(this.staticPosCounter);
 
 		var timeNow = new Date().getTime();
         if (this.lastTime != 0) {

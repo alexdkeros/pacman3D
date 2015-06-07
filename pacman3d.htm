@@ -163,13 +163,29 @@
 		//z-axis points out of the screen. we translate -8 which is the inverse transform
 		//in essence we move the world -8 units to have the camera 8 units forward.
 		//REMEMBER there is no actual camera in WebGL
-		mat4.translate(mvMatrix, [-5.0, 4.0, -20.0]);
-		mat4.rotate(mvMatrix, degToRad(-45),[1.0, 0, 0.0]);
+
+        
+        if (camera==0){
+            /*-------------------------------------------overview camera------------------------------------------------------*/
+            mat4.translate(mvMatrix, [-5.0, 4.0, -20.0]);
+		    mat4.rotate(mvMatrix, degToRad(-45),[1.0, 0, 0.0]);
+        }else if (camera==1){
+            /*-------------------------------------follow from above camera------------------------------------------------------*/
+            mat4.translate(mvMatrix, [-xTrans, -yTrans, -10]);
+
+        }else if (camera==2){
+            /*-------------------------------------3rd person camera------------------------------------------------------*/
+            mat4.rotate(mvMatrix, degToRad(-90), [1, 0, 0]);
+            mat4.rotate(mvMatrix, degToRad(-yaw), [0, 0, 1]);
+            mat4.translate(mvMatrix, [-xTrans, -yTrans, -zPos]);
+        }
 
 		var trans=[0.0,0.0,0.0];
 		var rot={angle:0.0,rotAxis:[0.0, 0.0, 0.0]};
 		W.drawWorld();
-		P.drawObj();
+        if (camera!=2){
+		  P.drawObj();
+        }
         G1.drawObj();
         }
 
@@ -182,6 +198,9 @@
 
     //Animate function
     function animate(){
+        if (camera==2){
+            animate3rdPerson();
+        }
         //animate Pacman and world
         var ret=[];
         ret=P.animate(W,xTrans,yTrans);

@@ -161,17 +161,16 @@ function getRandomArbitrary(min, max) {
     
     //array for keeping pressed keys
     var currentlyPressedKeys = {};
-    var xTrans=0.0;
-    var yTrans=0.0;
     //Keyboard handler
     //do not touch :) 
+    var camera=0;
     function handleKeyDown(event) {
         currentlyPressedKeys[event.keyCode] = true;
 
-        if (String.fromCharCode(event.keyCode) == "F") {
-            filter += 1;
-            if (filter == 3) {
-                filter = 0;
+        if (String.fromCharCode(event.keyCode) == "C") {
+            camera += 1;
+            if (camera == 3) {
+                camera = 0;
             }
         }
     }
@@ -183,24 +182,81 @@ function getRandomArbitrary(min, max) {
         currentlyPressedKeys[event.keyCode] = false;
     }
 
+    var xTrans=0.0;
+    var yTrans=0.0;
+
+    var yaw = 0;
+    var yawRate = 0;
+    var speed = 0;
+
+    var pitch = 0;
+    var pitchRate = 0;
     //Key pressed callback
     //37-40 are the codes for the arrow keys
     //xTrans + yTrans are used in the ModelView matrix for local transformation of the cube
     function handleKeys() {
-        if (currentlyPressedKeys[37]) {
-            // Left cursor key
-            xTrans -= 0.1;
+        if (camera!=2){
+            //translation handling
+            if (currentlyPressedKeys[37]) {
+                // Left cursor key
+                xTrans -= 0.1;
+            }
+            if (currentlyPressedKeys[39]) {
+                // Right cursor key
+                xTrans += 0.1;
+            }
+            if (currentlyPressedKeys[38]) {
+                // Up cursor key
+                yTrans += 0.1;
+            }
+            if (currentlyPressedKeys[40]) {
+                // Down cursor key
+                yTrans -= 0.1;
+            }
+        }else{
+
+            //yaw handling
+            if (currentlyPressedKeys[37]) {
+                // Left cursor key
+                yawRate -= 0.1;
+            } else if (currentlyPressedKeys[39]) {
+                // Right cursor key 
+                yawRate += 0.1;
+            } else {
+                yawRate = 0;
+            }
+
+            //speed handling
+
+            if (currentlyPressedKeys[38]) {
+                // Up cursor key
+                speed = 0.01;
+            }else if (currentlyPressedKeys[40]) {
+                // Down cursor key
+                speed = -0.01;
+            } else {
+                speed = 0;
+            }
         }
-        if (currentlyPressedKeys[39]) {
-            // Right cursor key
-            xTrans += 0.1;
+    }
+
+
+    var lastTime=0.0;    
+    var zPos = 0.5;
+function animate3rdPerson() {
+               var timeNow = new Date().getTime();
+        if (lastTime != 0) {
+            var elapsed = timeNow - lastTime;
+
+            if (speed != 0) {
+                xTrans -= Math.sin(degToRad(yaw)) * speed * elapsed;
+                yTrans += Math.cos(degToRad(yaw)) * speed * elapsed;
+
+            }
+
+            yaw += yawRate * elapsed;
+
         }
-        if (currentlyPressedKeys[38]) {
-            // Up cursor key
-            yTrans += 0.1;
-        }
-        if (currentlyPressedKeys[40]) {
-            // Down cursor key
-            yTrans -= 0.1;
-        }
+        lastTime = timeNow;
+
     }
