@@ -157,9 +157,8 @@ function degToRad(degrees) {
     
     //array for keeping pressed keys
     var currentlyPressedKeys = {};
-    var xTrans = 0.0;
-    var yTrans = 0.0;
-
+    var xTrans=0.0;
+    var yTrans=0.0;
     //Keyboard handler
     //do not touch :) 
     function handleKeyDown(event) {

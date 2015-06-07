@@ -381,8 +381,8 @@ function Tsphere(){
 }
 Tsphere.inheritsFrom(TexturedObject);
 Tsphere.prototype.formObject=function(radius,texture){
-    var latitudeBands = 30;
-    var longitudeBands = 30;
+    var latitudeBands = 20;
+    var longitudeBands = 20;
     var vertexPositionData={};
     vertexPositionData.vals = [];
     //var normalData = [];
@@ -401,8 +401,8 @@ Tsphere.prototype.formObject=function(radius,texture){
             var x = cosPhi * sinTheta;
             var y = cosTheta;
             var z = sinPhi * sinTheta;
-            var u = 1 - (longNumber / longitudeBands);
-            var v = 1 - (latNumber / latitudeBands);
+            var u = 1-(longNumber / longitudeBands);
+            var v = 1- (latNumber / latitudeBands);
 
         //    normalData.push(x);
         //    normalData.push(y);
@@ -526,7 +526,9 @@ World.prototype.initWorld=function(){
 					row.push(t);
 				}
 			}
-			this.worldElements.push(row);
+			if (row.length>0){
+				this.worldElements.push(row);
+			}
 		}
 		//console.log("world initialized");
 	}
@@ -543,11 +545,17 @@ World.prototype.drawWorld=function(){
 	}
 }
 World.prototype.canMove=function(location){
-	if (this.worldArray.length>0){
-		if (this.worldArray.length>location[0]){
-			if (this.worldArray[location[0]].length>location[1]){
-				if (this.worldArray[location[0]][location[1]]!="x"){
-					return true;
+	if (this.worldElements.length>0){
+		//check for bounds
+		if (location[0]>=0 && location[0]<=this.worldElements.length-1){
+			if (location[1]>=0 && location[1]<=this.worldElements[math.round(location[0])].length-1){
+				//check for cube in the way
+				var margin=0.4;
+				if (this.worldArray[math.round(location[0]+margin)][math.round(location[1]+margin)]!="x" &&
+					this.worldArray[math.round(location[0]-margin)][math.round(location[1]-margin)]!="x" &&
+					this.worldArray[math.round(location[0]+margin)][math.round(location[1]-margin)]!="x" &&
+					this.worldArray[math.round(location[0]-margin)][math.round(location[1]+margin)]!="x"){
+				return true;
 				}
 			}
 		}
@@ -577,4 +585,29 @@ World.prototype.moveTo=function(location){
 		}
 		return null;
 	}
+}
+
+function Pacman(){
+	this.pacBody;
+	this.pacTexture;
+	this.translation=[0,0,0];
+	this.rotation={angle:0,rotAxis:[0,0,0]};
+}
+Pacman.prototype.formObject=function(){
+	this.pacTexture=initTexture("face.png");
+	this.pacBody=new Tsphere();
+	this.pacBody.formObject(0.5,this.pacTexture);
+}
+Pacman.prototype.moveTo=function(location){
+	var prevTranslation=this.translation;
+	this.translation=location;
+	var res=math.subtract(this.translation,prevTranslation);
+	if (res[0]>0){
+		this.rotation.angle=130;
+		this.rotation.rotAxis=[0,1,0];
+	}
+
+}
+Pacman.prototype.drawObj=function(){
+	this.pacBody.drawObj(this.translation,this.rotation);
 }
