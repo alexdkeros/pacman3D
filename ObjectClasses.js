@@ -132,6 +132,7 @@ function TexturedObject(){
 	this.textureCoordBuffer;
 	this.vertexIndexBuffer;
 	this.texture;
+	this.fixRotation;
 }
 	/**
 	forms object
@@ -165,6 +166,9 @@ function TexturedObject(){
 		this.vertexIndexBuffer.numItems=indices.numItems;
 	
 		this.texture=texture;
+	}
+	TexturedObject.prototype.setFixRotation=function(rot){
+		this.fixRotation=rot;
 	}
 
 
@@ -215,6 +219,9 @@ function TexturedObject(){
 
 		mvPushMatrix();
 		mat4.translate(mvMatrix, translation);
+		if (this.fixRotation){
+			mat4.rotate(mvMatrix, degToRad(this.fixRotation.angle), this.fixRotation.rotAxis);
+		}
 		mat4.rotate(mvMatrix, degToRad(rotation.angle), rotation.rotAxis);
 		this.drawObj_(gl.TRIANGLES);
 		mvPopMatrix();
@@ -602,12 +609,34 @@ Pacman.prototype.moveTo=function(location){
 	var prevTranslation=this.translation;
 	this.translation=location;
 	var res=math.subtract(this.translation,prevTranslation);
-	if (res[0]>0){
-		this.rotation.angle=130;
+	if (res[0]>0 && math.round(res[1])==0){	//moving right
+		this.rotation.angle=180;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]<0 && math.round(res[1])==0){ //moving left
+		this.rotation.angle=0;
+		this.rotation.rotAxis=[0,1,0];	
+	}else if (res[1]>0 && math.round(res[0])==0){ //moving down 
+		this.rotation.angle=-90;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[1]<0 && math.round(res[0])==0){ //moving up
+		this.rotation.angle=90;
+		this.rotation.rotAxis=[0,1,0];	
+	}else if (res[0]<0 && res[1]<0){ //moving diagonaly left-up
+		this.rotation.angle=45;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]>0 && res[1]<0){ //moving diagonaly right-up
+		this.rotation.angle=135;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]<0 && res[1]>0){ //moving diagonaly left-down
+		this.rotation.angle=-45;
+		this.rotation.rotAxis=[0,1,0];
+	}else if (res[0]>0 && res[1]>0){ //moving diagonaly right-down
+		this.rotation.angle=-135;
 		this.rotation.rotAxis=[0,1,0];
 	}
 
 }
 Pacman.prototype.drawObj=function(){
+	this.pacBody.setFixRotation({angle:90, rotAxis:[1,0,0]});
 	this.pacBody.drawObj(this.translation,this.rotation);
 }
