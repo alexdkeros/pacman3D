@@ -169,13 +169,15 @@
 
     function tick() {
         requestAnimFrame(tick);
+        handleKeys();
         drawScene();
         animate();
     }
 
     
     function animate(){
-        console.log(W.moveTo([1,1]));
+        console.log([-yTrans,xTrans])
+        W.moveTo([-yTrans,xTrans]);
     }
 
 	//Entry point of the WebGL context
@@ -193,6 +195,10 @@
 		//Enable z-buffer for depth sorting
         gl.enable(gl.DEPTH_TEST);
 
+        //define the keyboard handlers
+        document.onkeydown = handleKeyDown;
+        document.onkeyup = handleKeyUp;
+        
 		//the first tick of our application
         tick();
     }

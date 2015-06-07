@@ -149,3 +149,55 @@ function degToRad(degrees) {
     return degrees * Math.PI / 180;
 }
 
+/************************************************
+*************************************************
+************keyboard  operations*****************
+*************************************************
+*************************************************/
+    
+    //array for keeping pressed keys
+    var currentlyPressedKeys = {};
+    var xTrans = 0.0;
+    var yTrans = 0.0;
+
+    //Keyboard handler
+    //do not touch :) 
+    function handleKeyDown(event) {
+        currentlyPressedKeys[event.keyCode] = true;
+
+        if (String.fromCharCode(event.keyCode) == "F") {
+            filter += 1;
+            if (filter == 3) {
+                filter = 0;
+            }
+        }
+    }
+
+
+    //Keyboard handler
+    //do not touch :) 
+    function handleKeyUp(event) {
+        currentlyPressedKeys[event.keyCode] = false;
+    }
+
+    //Key pressed callback
+    //37-40 are the codes for the arrow keys
+    //xTrans + yTrans are used in the ModelView matrix for local transformation of the cube
+    function handleKeys() {
+        if (currentlyPressedKeys[37]) {
+            // Left cursor key
+            xTrans -= 0.1;
+        }
+        if (currentlyPressedKeys[39]) {
+            // Right cursor key
+            xTrans += 0.1;
+        }
+        if (currentlyPressedKeys[38]) {
+            // Up cursor key
+            yTrans += 0.1;
+        }
+        if (currentlyPressedKeys[40]) {
+            // Down cursor key
+            yTrans -= 0.1;
+        }
+    }

@@ -543,8 +543,6 @@ World.prototype.drawWorld=function(){
 	}
 }
 World.prototype.canMove=function(location){
-	console.log(location)
-	console.log(this.worldArray)
 	if (this.worldArray.length>0){
 		if (this.worldArray.length>location[0]){
 			if (this.worldArray[location[0]].length>location[1]){
@@ -557,9 +555,9 @@ World.prototype.canMove=function(location){
 	return false;
 }
 World.prototype.moveTo=function(location){
-	var x=location[0];
-	var y=location[1];
-	if (this.canMove(location)){
+	var x=math.round(location[0]);
+	var y=math.round(location[1]);
+	if (this.canMove([x,y])){
 		if (this.worldArray[x][y]=="p"){
 			this.worldArray[x][y]="t";
 
@@ -568,7 +566,7 @@ World.prototype.moveTo=function(location){
 			this.worldElements[x][y]=t;
 
 			return "p";
-		}else if (this.worldArray[x][y]=="p"){
+		}else if (this.worldArray[x][y]=="U"){
 			this.worldArray[x][y]="t";
 
 			var t=new Ttile();
@@ -576,7 +574,7 @@ World.prototype.moveTo=function(location){
 			this.worldElements[x][y]=t;
 			
 			return "U";
+		}
+		return null;
 	}
-	return null;
-}
 }
