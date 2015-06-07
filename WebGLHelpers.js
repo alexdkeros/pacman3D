@@ -94,6 +94,19 @@ function handleLoadedTexture(texture) {
 }
 
 
+    /**
+    initialize texture
+    @param {image file} texture image
+    */
+    function initTexture(img){
+        var texture=gl.createTexture();
+        texture.image = new Image();
+        texture.image.onload = handleLoadedTexture.bind(window,texture); 
+        texture.image.src=img;
+        return texture;
+    }
+
+
 
 /************************************************
 *************************************************

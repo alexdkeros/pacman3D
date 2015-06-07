@@ -134,7 +134,7 @@
 	********************Buffers**********************
 	*************************************************
 	*************************************************/
-    var T;
+    var W;
 
 	//Initialize VBOs, IBOs and color
     function initBuffers() {
@@ -161,7 +161,6 @@
         //24 color values (we have 24 vertices to color...)
         unpackedColors.numItems = 24;
 
-        T.formObject(1);
     }
 
 
@@ -192,16 +191,16 @@
 		//z-axis points out of the screen. we translate -8 which is the inverse transform
 		//in essence we move the world -8 units to have the camera 8 units forward.
 		//REMEMBER there is no actual camera in WebGL
-		mat4.translate(mvMatrix, [0.0, 0.0, -10.0]);
-		mat4.rotate(mvMatrix, degToRad(0),[1.0, 0.0, 0.0]);
+		mat4.translate(mvMatrix, [0.0, 0.0, -15.0]);
+		mat4.rotate(mvMatrix, degToRad(-45),[1.0, 1.5, 0.0]);
 
 		var trans=[0.0,0.0,0.0];
 		var rot={angle:0.0,rotAxis:[0.0, 0.0, 0.0]};
-		T.drawObj(trans,rot);
+		W.drawWorld();
 		}
 
     function tick() {
-        //requestAnimFrame(tick);
+        requestAnimFrame(tick);
         drawScene();
     }
 
@@ -212,13 +211,10 @@
 		//Functions for initialization
 		//Check above
 		initGL(canvas);
-        T=new Tsphere();
-        var W=new World();
-        W.loadWorld("world.txt")
-        W.drawWorld();
+        W=new World();
+        W.loadWorld("world.txt");
         initShaders();
         initBuffers();
-        T.initTexture("face.png");
 		//Background Color: Color assigned for all pixels with no corresponding fragments
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		

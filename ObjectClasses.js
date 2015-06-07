@@ -139,7 +139,7 @@ function TexturedObject(){
 	@param {float array, int, int} textureCoord Contains texture positioning, textureCoord.vals, textureCoord.itemSizem, textureCoord.numItems attributes
 	@param {int array, int, int} indices Contains vertex indices.vals and indices.itemSize, indices.numItems attributes
 	*/
-	TexturedObject.prototype.formObject=function(vertices,textureCoord,indices){
+	TexturedObject.prototype.formObject=function(vertices,textureCoord,indices,texture){
 		//DBG
 		console.log("Forming object");
 		//vertices
@@ -163,18 +163,10 @@ function TexturedObject(){
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices.vals),gl.STATIC_DRAW);
 		this.vertexIndexBuffer.itemSize=indices.itemSize;
 		this.vertexIndexBuffer.numItems=indices.numItems;
+	
+		this.texture=texture;
 	}
 
-	/**
-	initialize texture
-	@param {image file} texture image
-	*/
-	TexturedObject.prototype.initTexture=function(img){
-		this.texture=gl.createTexture();
-		this.texture.image = new Image();
-		this.texture.image.onload = handleLoadedTexture.bind(window,this.texture); 
-		this.texture.image.src=img;
-	}
 
 	/**
 	draw object
@@ -220,8 +212,6 @@ function TexturedObject(){
 	TexturedObject.prototype.drawObj=function(translation, rotation){
 		//DBG
 		console.log("Drawing Object to specified location");
-		console.log(translation);
-		console.log(rotation);
 
 		mvPushMatrix();
 		mat4.translate(mvMatrix, translation);
@@ -239,7 +229,7 @@ function Tcube(){
 
 }
 Tcube.inheritsFrom(TexturedObject);
-Tcube.prototype.formObject=function(sideLength){
+Tcube.prototype.formObject=function(sideLength,texture){
 	var vertices={};
         vertices.vals = [
             // Front face
@@ -337,7 +327,7 @@ Tcube.prototype.formObject=function(sideLength){
 		indices.itemSize = 1;
 		//we have 36 indices (6 faces, every face has 2 triangles, each triangle 3 vertices: 2x3x6=36)
         indices.numItems = 36;
-    	this.parent.formObject.call(this,vertices,textureCoords,indices);
+    	this.parent.formObject.call(this,vertices,textureCoords,indices,texture);
 }
 
 /*
@@ -347,14 +337,14 @@ function Ttile(){
 
 }
 Ttile.inheritsFrom(TexturedObject);
-Ttile.prototype.formObject=function(sideLength){
+Ttile.prototype.formObject=function(sideLength,texture){
 	var vertices={};
         vertices.vals = [
             // Face
-            -(sideLength/2), -(sideLength/2),  0,
-             (sideLength/2), -(sideLength/2),  0,
-             (sideLength/2),  (sideLength/2),  0,
-            -(sideLength/2),  (sideLength/2),  0            
+            -(sideLength/2), -(sideLength/2),  -0.5,
+             (sideLength/2), -(sideLength/2),  -0.5,
+             (sideLength/2),  (sideLength/2),  -0.5,
+            -(sideLength/2),  (sideLength/2),  -0.5            
         ];
         vertices.itemSize = 3;
 		//we have 24 vertices
@@ -380,7 +370,7 @@ Ttile.prototype.formObject=function(sideLength){
 		indices.itemSize = 1;
 		//we have 6 indices (1 face, every face has 2 triangles, each triangle 3 vertices: 2x3=6)
         indices.numItems = 6;
-    	this.parent.formObject.call(this,vertices,textureCoords,indices);
+    	this.parent.formObject.call(this,vertices,textureCoords,indices,texture);
 }
 
 /*
@@ -390,7 +380,7 @@ function Tsphere(){
 
 }
 Tsphere.inheritsFrom(TexturedObject);
-Tsphere.prototype.formObject=function(radius){
+Tsphere.prototype.formObject=function(radius,texture){
     var latitudeBands = 30;
     var longitudeBands = 30;
     var vertexPositionData={};
@@ -450,7 +440,7 @@ Tsphere.prototype.formObject=function(radius){
     indexData.numItems = indexData.vals.length;
 
 
-	this.parent.formObject.call(this,vertexPositionData,textureCoordData,indexData);
+	this.parent.formObject.call(this,vertexPositionData,textureCoordData,indexData,texture);
 }
 
 
@@ -467,22 +457,18 @@ function TpelletTile(){
 	this.pellet = new Tsphere();
 	this.tile = new Ttile();
 }
-TpelletTile.prototype.formObject=function(radius, sideLength){
-	this.pellet.formObject(radius);
-	this.tile.formObject(sideLength);
+TpelletTile.prototype.formObject=function(radius, sideLength,pTexture, tTexture){
+	this.pellet.formObject(radius,pTexture);
+	this.tile.formObject(sideLength,tTexture);
 }
-TpelletTile.prototype.initTextures=function(pelTexture, tileTexture){
-	this.pellet.initTexture(pelTexture);
-	this.tile.initTexture(tileTexture);
-}
-TpelletTile.prototype.drawObj=function(translation){
+TpelletTile.prototype.drawObj=function(translation,rotation,pelletTexture,tileTexture){
 	var pelletTranslation=math.add([0.0, 0.0, 0.5],translation);
 	var pelletRotation={angle:0.0, rotAxis:[0,0,0]};
-	this.pellet.drawObj(pelletTranslation, pelletRotation);
+	this.pellet.drawObj(pelletTranslation, pelletRotation,pelletTexture);
 
 	var tileTranslation=math.add([0.0, 0.0, 0.0],translation);
 	var tileRotation={angle:0.0, rotAxis:[0,0,0]};
-	this.tile.drawObj(tileTranslation, tileRotation);
+	this.tile.drawObj(tileTranslation, tileRotation,tileTexture);
 }
 
 
@@ -493,25 +479,61 @@ TpelletTile.prototype.drawObj=function(translation){
 *************************************************/
 function World(){
 	this.worldArray=[];
+	this.worldElements=[];
 }
 World.prototype.loadWorld=function(file){
     var request = new XMLHttpRequest();
     request.open("GET", file);
-    request.onreadystatechange = function () {
-        if (request.readyState == 4) {
-            var data=request.responseText;
-        	var lines=data.split("\n");
-        	var wAr=[];
-        	for (var i in lines){
-        		wAr.push(lines[i].split(" "));
-        	}
-        	this.worldArray=wAr;
-        	console.log(this.worldArray);
-        	
-        }
-    }
+    request.onreadystatechange =this.handleLoadedWorld.bind(window, request,this);
     request.send();
 }
+World.prototype.handleLoadedWorld=function(request,el){
+	if (request.readyState == 4) {
+            var data=request.responseText;
+        	var lines=data.split("\n");
+        	for (var i in lines){
+        		el.worldArray.push(lines[i].split(" "));
+        	}
+        el.initWorld();
+    }
+}
+
+World.prototype.initWorld=function(){
+	if (this.worldArray.length>0){
+		var pelletTexture=initTexture("test.png");
+		var tileTexture=initTexture("brick.png");
+		for (var i in this.worldArray){
+			var row=[];
+			for (var j in this.worldArray[i]){
+				console.log(this.worldArray[i][j])
+				if (this.worldArray[i][j]=="x"){
+					var t=new Tcube();
+					t.formObject(1,pelletTexture);
+					row.push(t);
+				}else if (this.worldArray[i][j]=="p"){
+					var t=new TpelletTile();
+					t.formObject(0.15,1,pelletTexture,tileTexture);
+					row.push(t);
+				}else if (this.worldArray[i][j]=="U"){
+					var t=new TpelletTile();
+					t.formObject(0.25,1,pelletTexture,tileTexture);
+					row.push(t);
+				}
+			}
+			//console.log(row)
+			this.worldElements.push(row);
+		}
+		console.log("world initialized");
+	}
+}
 World.prototype.drawWorld=function(){
-	console.log(this.worldArray);
+	if (this.worldElements.length>0){
+		for (var i in this.worldElements){
+			for (var j in this.worldElements[i]){
+				var translation=[j,i,0];
+				var rotation={angle:0, rotAxis:[0,0,0]};
+				this.worldElements[i][j].drawObj(translation,rotation);
+			}
+		}
+	}
 }
