@@ -556,7 +556,10 @@ function World(){
 	this.worldArray=[];
 	this.worldElements=[];
 	this.pelletTexture;
+    this.superPelletTexture;
 	this.tileTexture;
+    this.boxTexture;
+    this.pelletCounter=0;
 }
 World.prototype.loadWorld=function(file){
     var request = new XMLHttpRequest();
@@ -577,23 +580,27 @@ World.prototype.handleLoadedWorld=function(request,el){
 
 World.prototype.initWorld=function(){
 	if (this.worldArray.length>0){
-		this.pelletTexture=initTexture("test.png");
-		this.tileTexture=initTexture("brick.png");
+		this.pelletTexture=initTexture("metalBall.png");
+        this.superPelletTexture=initTexture("superMetalBall.png");
+		this.tileTexture=initTexture("metal1.png");
+        this.boxTexture=initTexture("metal2.png");
 		for (var i in this.worldArray){
 			var row=[];
 			for (var j in this.worldArray[i]){
 				//console.log(this.worldArray[i][j])
 				if (this.worldArray[i][j]=="x"){
 					var t=new Tcube();
-					t.formObject(1,this.pelletTexture);
+					t.formObject(1,this.boxTexture);
 					row.push(t);
 				}else if (this.worldArray[i][j]=="p"){
+                    this.pelletCounter+=1;
 					var t=new TpelletTile();
 					t.formObject(0.15,1,this.pelletTexture,this.tileTexture);
 					row.push(t);
 				}else if (this.worldArray[i][j]=="U"){
-					var t=new TpelletTile();
-					t.formObject(0.25,1,this.pelletTexture,this.tileTexture);
+					this.pelletCounter+=1;
+                    var t=new TpelletTile();
+					t.formObject(0.25,1,this.superPelletTexture,this.tileTexture);
 					row.push(t);
 				}else if (this.worldArray[i][j]=="t"){
 					var t=new Ttile();
@@ -605,7 +612,7 @@ World.prototype.initWorld=function(){
 				this.worldElements.push(row);
 			}
 		}
-		//console.log("world initialized");
+		console.log("world initialized");
 	}
 }
 World.prototype.drawWorld=function(){
@@ -644,6 +651,7 @@ World.prototype.moveTo=function(l){
 	var y=math.round(location[1]);
 
 	if (this.worldArray[x][y]=="p"){
+        this.pelletCounter-=1;
 		this.worldArray[x][y]="t";
 
 		var t=new Ttile();
@@ -652,6 +660,7 @@ World.prototype.moveTo=function(l){
 
 		return "p";
 	}else if (this.worldArray[x][y]=="U"){
+        this.pelletCounter-=1;
 		this.worldArray[x][y]="t";
 
 		var t=new Ttile();
@@ -660,6 +669,9 @@ World.prototype.moveTo=function(l){
 		
 		return "U";
 	}
+    if (this.pelletCounter==0){
+        return "W";
+    }
 	return null;
 
 }
@@ -713,22 +725,28 @@ Pacman.prototype.drawObj=function(){
 	this.pacBody.setFixRotation({angle:90, rotAxis:[1,0,0]});
 	this.pacBody.drawObj(this.translation,this.rotation);
 }
-Pacman.prototype.animate=function(world,xTrans,yTrans){
-	if (world.canMove([xTrans,yTrans,0])){
-        P.moveTo([xTrans,yTrans,0]);  
-        world.moveTo([xTrans,yTrans,0]);
+Pacman.prototype.animate=function(world,xT,yT){
+	var token=null;
+	if (world.canMove([xT,yT,0])){
+        P.moveTo([xT,yT,0]);  
+        token=world.moveTo([xT,yT,0]);
     }
-    return this.translation;
+    xTrans=this.translation[0];
+    yTrans=this.translation[1];
+    return token;
 }
-
 /*
 ghost
 */
 function Ghost(){
 	this.gBody;
 	this.gTexture;
+    this.alertTexture;
 	this.translation=[0,0,0];
 	this.rotation={angle:0,rotAxis:[0,0,0]};
+
+	this.eaten=false;
+    this.alert=false;
 
 	this.speedX = 0;
 	this.speedY = 0;
@@ -736,8 +754,9 @@ function Ghost(){
 
 
 }
-Ghost.prototype.formObject=function(texturefile){
+Ghost.prototype.formObject=function(texturefile,alerttexturefile){
 	this.gTexture=initTexture(texturefile);
+    this.alertTexture=initTexture(alerttexturefile);
 	this.gBody=new Tsphere();
 	this.gBody.formObject(0.5,this.gTexture);
 
@@ -783,46 +802,95 @@ Ghost.prototype.drawObj=function(){
 	this.gBody.drawObj(this.translation,this.rotation);
 }
 Ghost.prototype.animate=function(world){
-		var translation=[0,0,0];
-		translation[0] = this.translation[0]+this.speedX;
-		translation[1] = this.translation[1]+this.speedY;
-
-
-		var timeNow = new Date().getTime();
-        if (this.lastTime != 0) {
-            var elapsed = timeNow - this.lastTime;
-	
-			this.counter += elapsed;
-			if (this.counter > 1000.0 || this.staticPosCounter>100.0){
-				this.speedX =getRandomArbitrary(-0.05,0.05);
-			}	
-			if (this.counter>800.0|| this.staticPosCounter>80.0){
-				this.speedY =getRandomArbitrary(-0.05,0.05);
-			}
-			if (Math.random() > 0.3){
-				this.speedX -= getRandomArbitrary(-0.05,0.05);
-				this.speedY -= getRandomArbitrary(-0.05,0.05);
-				this.counter=0;
-			}
-			
-		}
-	    this.lastTime = timeNow;
-	    
-	    if (world.canMove(translation)){
-            this.moveTo(translation);
-            this.staticPosCounter=0;
+	if (this.eaten==false){
+		if (this.alert==false){
+            this.normalAnimate(world);
         }else{
-        	this.staticPosCounter+=1;
+            this.alertAnimate();
         }
-	    
-}
+	}else{
+		this.eatenAnimate();
+	}
 
+}
+Ghost.prototype.normalAnimate=function(world){
+	var timeNow = new Date().getTime();
+	var translation=[0,0,0];
+	translation[0] = this.translation[0]+this.speedX;
+	translation[1] = this.translation[1]+this.speedY;
+
+
+    if (this.lastTime != 0) {
+        var elapsed = timeNow - this.lastTime;
+
+		this.counter += elapsed;
+		if (this.counter > 450.0 || this.staticPosCounter>100.0){
+			this.speedX =getRandomArbitrary(-0.05,0.05);
+		}	
+		if (this.counter>350.0|| this.staticPosCounter>80.0){
+			this.speedY =getRandomArbitrary(-0.05,0.05);
+		}
+		if (Math.random() > 0.9){
+			this.speedX = getRandomArbitrary(-0.05,0.05);
+			this.speedY = getRandomArbitrary(-0.05,0.05);
+			this.counter=0;
+		}
+		
+	}
+    this.lastTime = timeNow;
+    
+    if (world.canMove(translation)){
+        this.moveTo(translation);
+        this.staticPosCounter=0;
+    }else{
+    	this.staticPosCounter+=1;
+    }
+}
+Ghost.prototype.eatenAnimate=function(world){
+	var timeNow = new Date().getTime();
+	if (this.lastTime!=0){
+		var elapsed=timeNow-this.lastTime;
+        this.translation[2]+=0.2;
+
+        if (elapsed>2000){
+            this.gBody.formObject(0.5,this.gTexture);
+            this.eaten=false;
+            this.alert=false;
+            this.translation[2]=0;
+            this.lastTime=0.0;
+        }
+        this.moveTo(this.translation);
+	}
+}
+Ghost.prototype.alertAnimate=function(){
+    var timeNow = new Date().getTime();
+    if (this.lastTime!=0){
+        var elapsed=timeNow-this.lastTime;
+        this.translation[0]+=getRandomArbitrary(-0.05,0.05);
+        this.translation[1]+=getRandomArbitrary(-0.05,0.05);
+        if (elapsed>3000){
+            this.gBody.formObject(0.5,this.gTexture);
+            this.alert=false;
+            this.lastTime=0.0;
+        }
+        this.moveTo(this.translation);
+    }
+}
+Ghost.prototype.eat=function(){
+	this.eaten=true;
+	this.lastTime=new Date().getTime();
+}
+Ghost.prototype.alerted=function(){
+    this.alert=true;
+    this.gBody.formObject(0.25,this.alertTexture);
+    this.lastTime=new Date().getTime();
+}
 
 function checkColission(el1,el2){
 	var margin=0.3;
 	if (math.round(el1.translation[0]+margin)==math.round(el2.translation[0]) || math.round(el1.translation[0]-margin)==math.round(el2.translation[0])){
 		if (math.round(el1.translation[1]+margin)==math.round(el2.translation[1]) || math.round(el1.translation[1]-margin)==math.round(el2.translation[1])){
-			console.log("COLLISION");
+			//console.log("COLLISION");
 			return true;
 		}
 	}

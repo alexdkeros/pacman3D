@@ -169,6 +169,22 @@ function getRandomArbitrary(min, max) {
     //Keyboard handler
     //do not touch :) 
     var camera=0;
+    var stateEnum={
+        START:"start",
+        RUNNING:"running",
+        STOP:"stop",
+        GAME_OVER:"game over",
+        COLLISION:"collision",
+        UBER_PELLET:"super pellet",
+        WON:"You Won"
+    };
+    var state=stateEnum.STOP;
+
+    function stateChange(newState){
+            state=newState;
+            document.getElementById("inform").innerHTML=state;   
+    }
+
     function handleKeyDown(event) {
         currentlyPressedKeys[event.keyCode] = true;
 
@@ -177,6 +193,10 @@ function getRandomArbitrary(min, max) {
             if (camera == 3) {
                 camera = 0;
             }
+        }
+        if (String.fromCharCode(event.keyCode) == "S") {
+            stateChange(stateEnum.START);
+            webGLStart();
         }
     }
 
@@ -244,6 +264,7 @@ function getRandomArbitrary(min, max) {
             }
         }
     }
+
 
 
     var lastTime=0.0;    

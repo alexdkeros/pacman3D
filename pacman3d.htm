@@ -177,11 +177,8 @@
 	*************************************************/
     var W;
     var P;
-    var G1;
-
-    var G1x=0.0;
-    var G1y=0.0;
-
+    var G=[];
+    
 	//For every frame this function draws the complete scene from the beginning
     function drawScene() {
 	//the viewport gets the canvas values (that were assigned to the gl context variable)
@@ -234,7 +231,7 @@
         
         if (camera==0){
             /*-------------------------------------------overview camera------------------------------------------------------*/
-            mat4.translate(mvMatrix, [-5.0, 4.0, -20.0]);
+            mat4.translate(mvMatrix, [-5.5, 4.0, -20.0]);
 		    mat4.rotate(mvMatrix, degToRad(-45),[1.0, 0, 0.0]);
         }else if (camera==1){
             /*-------------------------------------follow from above camera------------------------------------------------------*/
@@ -247,54 +244,94 @@
             mat4.translate(mvMatrix, [-xTrans, -yTrans, -zPos]);
         }
 
-		var trans=[0.0,0.0,0.0];
-		var rot={angle:0.0,rotAxis:[0.0, 0.0, 0.0]};
 		W.drawWorld();
+        
         if (camera!=2){
 		  P.drawObj();
         }
-        G1.drawObj();
-        }
-
-    function tick() {
-        requestAnimFrame(tick);
-        handleKeys();
-        drawScene();
-        animate();
+        
+        for (var i in G){
+            G[i].drawObj();
+        }    
     }
 
     //Animate function
+    var timer;
     function animate(){
+
         if (camera==2){
             animate3rdPerson();
         }
         //animate Pacman and world
-        var ret=[];
-        ret=P.animate(W,xTrans,yTrans);
-        xTrans=ret[0];
-        yTrans=ret[1];
-
-        //animate ghosts
-        G1.animate(W);
-
-        checkColission(P,G1);
-
+        var token=P.animate(W,xTrans,yTrans);
         
+        if (token=="U"){
+            stateChange(stateEnum.UBER_PELLET);
+        }else if (token=="W"){
+            stateChange(stateEnum.WON);
+        }else{
+            stateChange(stateEnum.RUNNING);
+        }
 
+        for (var i in G){
+            if (state==stateEnum.UBER_PELLET){
+                G[i].alerted();
+            }
+            G[i].animate(W);
+            
+            var collision=checkColission(P,G[i]);
+            if (collision && G[i].alert){
+                G[i].eat();
+            }else if (collision){
+                
+                if ((new Date().getTime()-timer)>2000){
+                    stateChange(stateEnum.GAME_OVER);
+                }
+            }
+        }
+    }
+
+    function tick() {
+        if (state!=stateEnum.STOP && state!=stateEnum.GAME_OVER && state!=stateEnum.WON){
+            requestAnimFrame(tick);
+        }
+        handleKeys();
+        
+        drawScene();
+        
+        if (state==stateEnum.RUNNING || state==stateEnum.UBER_PELLET){
+            animate();
+        }
+        if (state==stateEnum.START){
+            timer=new Date().getTime();            
+            stateChange(stateEnum.RUNNING);
+        }
     }
 
 	//Entry point of the WebGL context
 	function webGLStart() {
         var canvas = document.getElementById("Pacman3D");
 		//Functions for initialization
-		//Check above
-		initGL(canvas);
+        initGL(canvas);
+        //create world
         W=new World();
-        W.loadWorld("world.txt");
+        //select world from radio buttons
+        var worldSel=document.getElementsByName("world");
+        for (var i = 0, length = worldSel.length; i < length; i++) {
+            if (worldSel[i].checked) {
+                W.loadWorld("world"+document.getElementsByName("world")[i].value+".txt");
+            }
+        }
+        //create pacman
         P=new Pacman();
         P.formObject();
-        G1=new Ghost();
-        G1.formObject("ghost.png");
+        //create ghosts
+        for (var i=0; i<parseInt(document.getElementById("ghosts").value);i++){
+            var g=new Ghost();
+            g.formObject("ghost.png","scaredGhost.png");
+            G[i]=g;
+        }
+        //initialize shaders
         initShaders();
         //Background Color: Color assigned for all pixels with no corresponding fragments
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -302,13 +339,16 @@
 		//Enable z-buffer for depth sorting
         gl.enable(gl.DEPTH_TEST);
 
-        //define the keyboard handlers
-        document.onkeydown = handleKeyDown;
-        document.onkeyup = handleKeyUp;
-        
 		//the first tick of our application
         tick();
     }
+
+    function Start(){
+        document.onkeydown = handleKeyDown;
+        document.onkeyup = handleKeyUp;
+
+    }
+
 
 //end of Javascript
 </script>
@@ -316,22 +356,37 @@
 <!---------------------------------------------------------------------------------------------------------->
 <!---------HMTL for the canvas element---------------------------------------------------------------------->
 <!---------------------------------------------------------------------------------------------------------->
-<body onload="webGLStart();"> <!-- calls the entry point of our application -->
+<body onload="Start();"> <!-- calls the entry point of our application -->
 
     <canvas id="Pacman3D" style="border: none;" width="500" height="500"></canvas>
 <br/>
-
+    <h1 id="inform"></h1>
+    <p> use "c" to change camera</p>
+    <p> press "s" to restart</p>
+    <br/>
     <input type="checkbox" id="lighting" checked /> Use lighting<br/>
     <br/>
+
+    <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>Select world:</b>
+            <td>1: <input type="radio" name="world" value="1" checked/>
+            <td>2: <input type="radio" name="world" value="2" />
+        </tr>
+        <tr>
+            <td><b>Ghosts:</b>
+            <td>Boooo!:<input type="text" id="ghosts" value="3" />
+        </tr>
+    </table>
 
     <h2>Point light:</h2>
 
     <table style="border: 0; padding: 10px;">
         <tr>
             <td><b>Location:</b>
-            <td>X: <input type="text" id="lightPositionX" value="0.0" />
-            <td>Y: <input type="text" id="lightPositionY" value="0.0" />
-            <td>Z: <input type="text" id="lightPositionZ" value="-5.0" />
+            <td>X: <input type="text" id="lightPositionX" value="6.0" />
+            <td>Y: <input type="text" id="lightPositionY" value="6.0" />
+            <td>Z: <input type="text" id="lightPositionZ" value="10.0" />
         </tr>
         <tr>
             <td><b>Colour:</b>
